@@ -11,14 +11,14 @@ export function CurrencyToggle() {
     <div className="flex items-center gap-2">
       <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
         <button
-          onClick={() => dispatch({ type: 'SET_FILTERS', payload: { currencyMode: 'multi' } })}
+          onClick={() => dispatch({ type: 'SET_FILTERS', payload: { currencyMode: 'all' } })}
           className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-            filters.currencyMode === 'multi'
+            filters.currencyMode === 'all'
               ? 'bg-indigo-600 text-white'
               : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
           }`}
         >
-          Multi
+          All
         </button>
         {currencies.map((c) => (
           <button
@@ -26,11 +26,11 @@ export function CurrencyToggle() {
             onClick={() =>
               dispatch({
                 type: 'SET_FILTERS',
-                payload: { currencyMode: 'converted', baseCurrency: c },
+                payload: { currencyMode: 'filtered', filterCurrency: c },
               })
             }
             className={`px-3 py-1.5 text-xs font-medium transition-colors border-l border-gray-200 dark:border-gray-700 ${
-              filters.currencyMode === 'converted' && filters.baseCurrency === c
+              filters.currencyMode === 'filtered' && filters.filterCurrency === c
                 ? 'bg-indigo-600 text-white'
                 : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
             }`}
