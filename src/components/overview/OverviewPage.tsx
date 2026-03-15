@@ -1,12 +1,17 @@
 import { useFilteredData } from '../../hooks/useFilteredData';
 import { useCurrencyConvert } from '../../hooks/useCurrencyConvert';
+import { useBudget } from '../../context/BudgetContext';
 import { SummaryCards } from './SummaryCards';
 import { MonthlyTrendChart } from './MonthlyTrendChart';
 import { TopCategoriesChart } from './TopCategoriesChart';
+import { MonthlyComparison } from './MonthlyComparison';
 
 export function OverviewPage() {
+  const { data } = useBudget();
   const filtered = useFilteredData();
   const transactions = useCurrencyConvert(filtered);
+  // Monthly comparison always uses all transactions (not date-filtered)
+  const allTransactions = useCurrencyConvert(data?.transactions ?? []);
 
   if (transactions.length === 0) {
     return (
@@ -19,8 +24,9 @@ export function OverviewPage() {
   return (
     <div className="space-y-6">
       <SummaryCards transactions={transactions} />
+      <MonthlyComparison transactions={allTransactions} />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <MonthlyTrendChart transactions={transactions} />
+        <MonthlyTrendChart transactions={allTransactions} />
         <TopCategoriesChart transactions={transactions} />
       </div>
     </div>
