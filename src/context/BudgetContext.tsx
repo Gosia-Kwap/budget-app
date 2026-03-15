@@ -14,7 +14,7 @@ const initialState: AppState = {
   data: null,
   filters: initialFilters,
   activePage: 'overview',
-  darkMode: localStorage.getItem('darkMode') === 'true',
+  darkMode: localStorage.getItem('darkMode') !== null ? localStorage.getItem('darkMode') === 'true' : false,
   loading: false,
   error: null,
 };
