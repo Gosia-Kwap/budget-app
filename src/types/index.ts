@@ -29,12 +29,6 @@ export interface CategoryMapping {
   category: string;
 }
 
-export interface ExchangeRates {
-  CHF: number;
-  EUR: number;
-  PLN: number;
-}
-
 export interface BudgetData {
   transactions: Transaction[];
   accounts: AccountBalance[];
@@ -44,9 +38,8 @@ export interface BudgetData {
 export interface FilterState {
   startDate: Date | null;
   endDate: Date | null;
-  currencyMode: 'multi' | 'converted';
-  baseCurrency: Currency;
-  exchangeRates: ExchangeRates;
+  currencyMode: 'all' | 'filtered';
+  filterCurrency: Currency;
 }
 
 export interface AppState {

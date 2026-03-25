@@ -1,13 +1,11 @@
 import { createContext, useContext, useReducer, type ReactNode, type Dispatch } from 'react';
 import type { AppState, AppAction, FilterState } from '../types';
-import { DEFAULT_RATES } from '../lib/currency';
 
 const initialFilters: FilterState = {
   startDate: null,
   endDate: null,
-  currencyMode: 'multi',
-  baseCurrency: 'CHF',
-  exchangeRates: DEFAULT_RATES,
+  currencyMode: 'all',
+  filterCurrency: 'CHF',
 };
 
 const initialState: AppState = {
