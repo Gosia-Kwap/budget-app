@@ -3,6 +3,7 @@ import { useBudget } from '../../context/BudgetContext';
 import { useFilteredData } from '../../hooks/useFilteredData';
 import { AccountCard } from './AccountCard';
 import { BalanceTimeline } from './BalanceTimeline';
+import { SavingsOverview } from './SavingsOverview';
 
 export function AccountsPage() {
   const { data, filters } = useBudget();
@@ -33,6 +34,7 @@ export function AccountsPage() {
           />
         ))}
       </div>
+      <SavingsOverview accounts={data.accounts} transactions={data.transactions} />
       <BalanceTimeline accounts={accounts} transactions={data.transactions} />
     </div>
   );
