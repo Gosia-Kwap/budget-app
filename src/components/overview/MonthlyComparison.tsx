@@ -1,21 +1,45 @@
-import { useMemo, useState } from 'react';
-import type { Transaction } from '../../types';
+import { useEffect, useMemo, useState } from 'react';
+import type { Transaction, Currency } from '../../types';
 import { ArrowUp, ArrowDown, Check, ChevronDown, ChevronRight } from 'lucide-react';
+import { useBudget } from '../../context/BudgetContext';
+import { CURRENCY_SYMBOLS } from '../../lib/currency';
 
 interface Props {
   transactions: Transaction[];
 }
 
+// Per-currency amounts for "all" mode, single number for filtered mode
+type CurrencyAmounts = Map<Currency, number>;
+
 interface MonthCategoryData {
   month: string;
   label: string;
-  categories: Map<string, number>;
-  subcategories: Map<string, Map<string, number>>; // category -> subcategory -> amount
-  totalExpenses: number;
-  totalIncome: number;
+  categories: Map<string, CurrencyAmounts>;
+  subcategories: Map<string, Map<string, CurrencyAmounts>>; // category -> subcategory -> amounts
+  totalExpenses: CurrencyAmounts;
+  totalIncome: CurrencyAmounts;
+}
+
+function addAmount(map: CurrencyAmounts, currency: Currency, amount: number) {
+  map.set(currency, (map.get(currency) ?? 0) + amount);
+}
+
+function sumAmounts(map: CurrencyAmounts): number {
+  let s = 0;
+  for (const v of map.values()) s += v;
+  return s;
 }
 
 export function MonthlyComparison({ transactions }: Props) {
+  const { filters } = useBudget();
+  const isAllCurrencies = filters.currencyMode === 'all';
+
+  const currencies = useMemo(() => {
+    const set = new Set<Currency>();
+    for (const t of transactions) set.add(t.currency);
+    return Array.from(set).sort() as Currency[];
+  }, [transactions]);
+
   const allMonthData = useMemo(() => {
     const monthMap = new Map<string, MonthCategoryData>();
     const categorySet = new Set<string>();
@@ -27,7 +51,7 @@ export function MonthlyComparison({ transactions }: Props) {
       const key = `${t.date.getFullYear()}-${String(t.date.getMonth() + 1).padStart(2, '0')}`;
       if (!monthMap.has(key)) {
         const label = t.date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-        monthMap.set(key, { month: key, label, categories: new Map(), subcategories: new Map(), totalExpenses: 0, totalIncome: 0 });
+        monthMap.set(key, { month: key, label, categories: new Map(), subcategories: new Map(), totalExpenses: new Map(), totalIncome: new Map() });
       }
       const m = monthMap.get(key)!;
       const cat = t.category || 'Other';
@@ -35,20 +59,25 @@ export function MonthlyComparison({ transactions }: Props) {
       categorySet.add(cat);
       const sign = t.type === 'ExpenseReturn' ? -1 : 1;
       const amount = sign * Math.abs(t.amount);
-      m.categories.set(cat, (m.categories.get(cat) ?? 0) + amount);
+
+      if (!m.categories.has(cat)) m.categories.set(cat, new Map());
+      addAmount(m.categories.get(cat)!, t.currency, amount);
+
       if (!m.subcategories.has(cat)) m.subcategories.set(cat, new Map());
       const subMap = m.subcategories.get(cat)!;
-      subMap.set(sub, (subMap.get(sub) ?? 0) + amount);
-      m.totalExpenses += amount;
+      if (!subMap.has(sub)) subMap.set(sub, new Map());
+      addAmount(subMap.get(sub)!, t.currency, amount);
+
+      addAmount(m.totalExpenses, t.currency, amount);
     }
 
     for (const t of incomes) {
       const key = `${t.date.getFullYear()}-${String(t.date.getMonth() + 1).padStart(2, '0')}`;
       if (!monthMap.has(key)) {
         const label = t.date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-        monthMap.set(key, { month: key, label, categories: new Map(), subcategories: new Map(), totalExpenses: 0, totalIncome: 0 });
+        monthMap.set(key, { month: key, label, categories: new Map(), subcategories: new Map(), totalExpenses: new Map(), totalIncome: new Map() });
       }
-      monthMap.get(key)!.totalIncome += t.amount;
+      addAmount(monthMap.get(key)!.totalIncome, t.currency, t.amount);
     }
 
     const allMonths = Array.from(monthMap.values()).sort((a, b) => a.month.localeCompare(b.month));
@@ -62,6 +91,17 @@ export function MonthlyComparison({ transactions }: Props) {
     const keys = allMonthData.allMonths.map((m) => m.month);
     return new Set(keys.slice(-3));
   });
+
+  // When a month is picked in the global MonthPicker, ensure it's selected here too
+  const pickerMonth = filters.startDate
+    ? `${filters.startDate.getFullYear()}-${String(filters.startDate.getMonth() + 1).padStart(2, '0')}`
+    : null;
+
+  useEffect(() => {
+    if (pickerMonth && !selectedMonths.has(pickerMonth)) {
+      setSelectedMonths((prev) => new Set([...prev, pickerMonth]));
+    }
+  }, [pickerMonth]);
 
   const toggleMonth = (key: string) => {
     setSelectedMonths((prev) => {
@@ -109,8 +149,8 @@ export function MonthlyComparison({ transactions }: Props) {
         if (subMap) for (const sub of subMap.keys()) subSet.add(sub);
       }
       const sorted = Array.from(subSet).sort((a, b) => {
-        const totalA = months.reduce((s, m) => s + (m.subcategories.get(cat)?.get(a) ?? 0), 0);
-        const totalB = months.reduce((s, m) => s + (m.subcategories.get(cat)?.get(b) ?? 0), 0);
+        const totalA = months.reduce((s, m) => s + sumAmounts(m.subcategories.get(cat)?.get(a) ?? new Map()), 0);
+        const totalB = months.reduce((s, m) => s + sumAmounts(m.subcategories.get(cat)?.get(b) ?? new Map()), 0);
         return totalB - totalA;
       });
       result.set(cat, sorted);
@@ -121,7 +161,7 @@ export function MonthlyComparison({ transactions }: Props) {
   const avgByCategory = useMemo(() => {
     const avg = new Map<string, number>();
     for (const cat of categories) {
-      const total = months.reduce((sum, m) => sum + (m.categories.get(cat) ?? 0), 0);
+      const total = months.reduce((sum, m) => sum + sumAmounts(m.categories.get(cat) ?? new Map()), 0);
       avg.set(cat, months.length > 0 ? total / months.length : 0);
     }
     return avg;
@@ -129,8 +169,46 @@ export function MonthlyComparison({ transactions }: Props) {
 
   if (allMonthData.allMonths.length === 0) return null;
 
-  const avgTotalExpenses = months.length > 0 ? months.reduce((s, m) => s + m.totalExpenses, 0) / months.length : 0;
-  const avgTotalIncome = months.length > 0 ? months.reduce((s, m) => s + m.totalIncome, 0) / months.length : 0;
+  // Helper to render a currency-aware value cell
+  function renderAmounts(amounts: CurrencyAmounts, className?: string) {
+    if (!isAllCurrencies || currencies.length <= 1) {
+      const val = sumAmounts(amounts);
+      return <span className={className}>{val === 0 ? '—' : val.toFixed(0)}</span>;
+    }
+    return (
+      <div className="flex flex-col items-end gap-0.5">
+        {currencies.map((c) => {
+          const val = amounts.get(c) ?? 0;
+          if (val === 0) return null;
+          return (
+            <span key={c} className={className}>
+              <span className="text-[10px] text-gray-400 dark:text-gray-500 mr-1">{CURRENCY_SYMBOLS[c]}</span>
+              {val.toFixed(0)}
+            </span>
+          );
+        })}
+        {sumAmounts(amounts) === 0 && <span className={className}>—</span>}
+      </div>
+    );
+  }
+
+  const avgTotalExpenses = (() => {
+    const avg: CurrencyAmounts = new Map();
+    for (const c of currencies) {
+      const total = months.reduce((s, m) => s + (m.totalExpenses.get(c) ?? 0), 0);
+      if (months.length > 0) avg.set(c, total / months.length);
+    }
+    return avg;
+  })();
+
+  const avgTotalIncome = (() => {
+    const avg: CurrencyAmounts = new Map();
+    for (const c of currencies) {
+      const total = months.reduce((s, m) => s + (m.totalIncome.get(c) ?? 0), 0);
+      if (months.length > 0) avg.set(c, total / months.length);
+    }
+    return avg;
+  })();
 
   return (
     <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5">
@@ -199,11 +277,11 @@ export function MonthlyComparison({ transactions }: Props) {
               </td>
               {months.map((m) => (
                 <td key={m.month} className="text-right py-2.5 px-3 tabular-nums font-semibold text-emerald-600 dark:text-emerald-400">
-                  {m.totalIncome.toFixed(0)}
+                  {renderAmounts(m.totalIncome, 'text-emerald-600 dark:text-emerald-400')}
                 </td>
               ))}
               <td className="text-right py-2.5 px-3 tabular-nums font-semibold text-emerald-600 dark:text-emerald-400 border-l border-gray-200 dark:border-gray-700">
-                {avgTotalIncome.toFixed(0)}
+                {renderAmounts(avgTotalIncome, 'text-emerald-600 dark:text-emerald-400')}
               </td>
             </tr>
 
@@ -227,16 +305,18 @@ export function MonthlyComparison({ transactions }: Props) {
                       </div>
                     </td>
                     {months.map((m, idx) => {
-                      const val = m.categories.get(cat) ?? 0;
-                      const prevVal = idx > 0 ? (months[idx - 1].categories.get(cat) ?? 0) : null;
+                      const amounts = m.categories.get(cat) ?? new Map();
+                      const val = sumAmounts(amounts);
+                      const prevVal = idx > 0 ? sumAmounts(months[idx - 1].categories.get(cat) ?? new Map()) : null;
                       const diff = prevVal !== null ? val - prevVal : null;
 
                       return (
                         <td key={m.month} className="text-right py-2 px-3 tabular-nums">
                           <div className="flex items-center justify-end gap-1">
-                            <span className={val > avg * 1.2 ? 'text-red-600 dark:text-red-400 font-semibold' : val === 0 ? 'text-gray-300 dark:text-gray-600' : 'text-gray-700 dark:text-gray-300'}>
-                              {val === 0 ? '—' : val.toFixed(0)}
-                            </span>
+                            {renderAmounts(
+                              amounts,
+                              val > avg * 1.2 ? 'text-red-600 dark:text-red-400 font-semibold' : val === 0 ? 'text-gray-300 dark:text-gray-600' : 'text-gray-700 dark:text-gray-300'
+                            )}
                             {diff !== null && diff !== 0 && val > 0 && (
                               <TrendIndicator diff={diff} />
                             )}
@@ -245,32 +325,41 @@ export function MonthlyComparison({ transactions }: Props) {
                       );
                     })}
                     <td className="text-right py-2 px-3 tabular-nums text-gray-500 dark:text-gray-400 font-medium border-l border-gray-200 dark:border-gray-700">
-                      {avg.toFixed(0)}
+                      {(() => {
+                        const avgAmounts: CurrencyAmounts = new Map();
+                        for (const c of currencies) {
+                          const total = months.reduce((s, m) => s + (m.categories.get(cat)?.get(c) ?? 0), 0);
+                          if (months.length > 0 && total !== 0) avgAmounts.set(c, total / months.length);
+                        }
+                        return renderAmounts(avgAmounts, 'text-gray-500 dark:text-gray-400 font-medium');
+                      })()}
                     </td>
                   </tr>
-                  {isExpanded && (subcategoriesFor.get(cat) ?? []).map((sub) => {
-                    const subAvg = months.length > 0
-                      ? months.reduce((s, m) => s + (m.subcategories.get(cat)?.get(sub) ?? 0), 0) / months.length
-                      : 0;
-                    return (
-                      <tr key={`${cat}-${sub}`} className="border-b border-gray-50 dark:border-gray-800/50 bg-gray-50/50 dark:bg-gray-800/20">
-                        <td className="py-1.5 pr-4 pl-7 text-xs text-gray-500 dark:text-gray-400 sticky left-0 bg-gray-50/50 dark:bg-gray-800/20">
-                          {sub}
-                        </td>
-                        {months.map((m) => {
-                          const val = m.subcategories.get(cat)?.get(sub) ?? 0;
-                          return (
-                            <td key={m.month} className="text-right py-1.5 px-3 tabular-nums text-xs text-gray-500 dark:text-gray-400">
-                              {val === 0 ? '—' : val.toFixed(0)}
-                            </td>
-                          );
-                        })}
-                        <td className="text-right py-1.5 px-3 tabular-nums text-xs text-gray-400 dark:text-gray-500 border-l border-gray-200 dark:border-gray-700">
-                          {subAvg.toFixed(0)}
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {isExpanded && (subcategoriesFor.get(cat) ?? []).map((sub) => (
+                    <tr key={`${cat}-${sub}`} className="border-b border-gray-50 dark:border-gray-800/50 bg-gray-50/50 dark:bg-gray-800/20">
+                      <td className="py-1.5 pr-4 pl-7 text-xs text-gray-500 dark:text-gray-400 sticky left-0 bg-gray-50/50 dark:bg-gray-800/20">
+                        {sub}
+                      </td>
+                      {months.map((m) => {
+                        const amounts = m.subcategories.get(cat)?.get(sub) ?? new Map();
+                        return (
+                          <td key={m.month} className="text-right py-1.5 px-3 tabular-nums text-xs">
+                            {renderAmounts(amounts, 'text-gray-500 dark:text-gray-400')}
+                          </td>
+                        );
+                      })}
+                      <td className="text-right py-1.5 px-3 tabular-nums text-xs border-l border-gray-200 dark:border-gray-700">
+                        {(() => {
+                          const avgAmounts: CurrencyAmounts = new Map();
+                          for (const c of currencies) {
+                            const total = months.reduce((s, m) => s + (m.subcategories.get(cat)?.get(sub)?.get(c) ?? 0), 0);
+                            if (months.length > 0 && total !== 0) avgAmounts.set(c, total / months.length);
+                          }
+                          return renderAmounts(avgAmounts, 'text-gray-400 dark:text-gray-500');
+                        })()}
+                      </td>
+                    </tr>
+                  ))}
                 </>
               );
             })}
@@ -278,43 +367,66 @@ export function MonthlyComparison({ transactions }: Props) {
             {/* Mandatory vs Adjustable subtotals */}
             {categories.some((c) => c.toLowerCase() === 'obowiązkowe') && (() => {
               const mandatoryKey = categories.find((c) => c.toLowerCase() === 'obowiązkowe')!;
-              const mandatoryByMonth = months.map((m) => m.categories.get(mandatoryKey) ?? 0);
-              const adjustableByMonth = months.map((m) => m.totalExpenses - (m.categories.get(mandatoryKey) ?? 0));
-              const avgMandatory = months.length > 0 ? mandatoryByMonth.reduce((s, v) => s + v, 0) / months.length : 0;
-              const avgAdjustable = months.length > 0 ? adjustableByMonth.reduce((s, v) => s + v, 0) / months.length : 0;
               return (
                 <>
                   <tr className="border-t border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30">
                     <td className="py-2 pr-4 font-semibold text-gray-600 dark:text-gray-300 sticky left-0 bg-gray-50/50 dark:bg-gray-800/30">
                       Mandatory
                     </td>
-                    {mandatoryByMonth.map((val, idx) => (
-                      <td key={months[idx].month} className="text-right py-2 px-3 tabular-nums font-semibold text-gray-600 dark:text-gray-300">
-                        {val === 0 ? '—' : val.toFixed(0)}
-                      </td>
-                    ))}
+                    {months.map((m) => {
+                      const amounts = m.categories.get(mandatoryKey) ?? new Map();
+                      return (
+                        <td key={m.month} className="text-right py-2 px-3 tabular-nums font-semibold text-gray-600 dark:text-gray-300">
+                          {renderAmounts(amounts, 'font-semibold text-gray-600 dark:text-gray-300')}
+                        </td>
+                      );
+                    })}
                     <td className="text-right py-2 px-3 tabular-nums font-semibold text-gray-500 dark:text-gray-400 border-l border-gray-200 dark:border-gray-700">
-                      {avgMandatory.toFixed(0)}
+                      {(() => {
+                        const avg: CurrencyAmounts = new Map();
+                        for (const c of currencies) {
+                          const total = months.reduce((s, m) => s + (m.categories.get(mandatoryKey)?.get(c) ?? 0), 0);
+                          if (months.length > 0 && total !== 0) avg.set(c, total / months.length);
+                        }
+                        return renderAmounts(avg, 'font-semibold text-gray-500 dark:text-gray-400');
+                      })()}
                     </td>
                   </tr>
                   <tr className="bg-gray-50/50 dark:bg-gray-800/30">
                     <td className="py-2 pr-4 font-semibold text-gray-600 dark:text-gray-300 sticky left-0 bg-gray-50/50 dark:bg-gray-800/30">
                       Adjustable
                     </td>
-                    {adjustableByMonth.map((val, idx) => {
-                      const prevVal = idx > 0 ? adjustableByMonth[idx - 1] : null;
-                      const diff = prevVal !== null ? val - prevVal : null;
+                    {months.map((m, idx) => {
+                      const adjustable: CurrencyAmounts = new Map();
+                      for (const c of currencies) {
+                        adjustable.set(c, (m.totalExpenses.get(c) ?? 0) - (m.categories.get(mandatoryKey)?.get(c) ?? 0));
+                      }
+                      const val = sumAmounts(adjustable);
+                      const prevAdjustable = idx > 0 ? (() => {
+                        const prev = months[idx - 1];
+                        let s = 0;
+                        for (const c of currencies) s += (prev.totalExpenses.get(c) ?? 0) - (prev.categories.get(mandatoryKey)?.get(c) ?? 0);
+                        return s;
+                      })() : null;
+                      const diff = prevAdjustable !== null ? val - prevAdjustable : null;
                       return (
-                        <td key={months[idx].month} className="text-right py-2 px-3 tabular-nums font-semibold text-gray-600 dark:text-gray-300">
+                        <td key={m.month} className="text-right py-2 px-3 tabular-nums font-semibold text-gray-600 dark:text-gray-300">
                           <div className="flex items-center justify-end gap-1">
-                            {val === 0 ? '—' : val.toFixed(0)}
+                            {renderAmounts(adjustable, 'font-semibold text-gray-600 dark:text-gray-300')}
                             {diff !== null && diff !== 0 && val > 0 && <TrendIndicator diff={diff} />}
                           </div>
                         </td>
                       );
                     })}
                     <td className="text-right py-2 px-3 tabular-nums font-semibold text-gray-500 dark:text-gray-400 border-l border-gray-200 dark:border-gray-700">
-                      {avgAdjustable.toFixed(0)}
+                      {(() => {
+                        const avg: CurrencyAmounts = new Map();
+                        for (const c of currencies) {
+                          const total = months.reduce((s, m) => s + (m.totalExpenses.get(c) ?? 0) - (m.categories.get(mandatoryKey)?.get(c) ?? 0), 0);
+                          if (months.length > 0 && total !== 0) avg.set(c, total / months.length);
+                        }
+                        return renderAmounts(avg, 'font-semibold text-gray-500 dark:text-gray-400');
+                      })()}
                     </td>
                   </tr>
                 </>
@@ -327,19 +439,20 @@ export function MonthlyComparison({ transactions }: Props) {
                 Total Expenses
               </td>
               {months.map((m, idx) => {
-                const prevTotal = idx > 0 ? months[idx - 1].totalExpenses : null;
-                const diff = prevTotal !== null ? m.totalExpenses - prevTotal : null;
+                const val = sumAmounts(m.totalExpenses);
+                const prevTotal = idx > 0 ? sumAmounts(months[idx - 1].totalExpenses) : null;
+                const diff = prevTotal !== null ? val - prevTotal : null;
                 return (
                   <td key={m.month} className="text-right py-2.5 px-3 tabular-nums font-bold text-red-600 dark:text-red-400">
                     <div className="flex items-center justify-end gap-1">
-                      {m.totalExpenses.toFixed(0)}
+                      {renderAmounts(m.totalExpenses, 'font-bold text-red-600 dark:text-red-400')}
                       {diff !== null && diff !== 0 && <TrendIndicator diff={diff} />}
                     </div>
                   </td>
                 );
               })}
               <td className="text-right py-2.5 px-3 tabular-nums font-bold text-red-600 dark:text-red-400 border-l border-gray-200 dark:border-gray-700">
-                {avgTotalExpenses.toFixed(0)}
+                {renderAmounts(avgTotalExpenses, 'font-bold text-red-600 dark:text-red-400')}
               </td>
             </tr>
 
@@ -349,15 +462,63 @@ export function MonthlyComparison({ transactions }: Props) {
                 Net (Income - Expenses)
               </td>
               {months.map((m) => {
-                const net = m.totalIncome - m.totalExpenses;
+                const netAmounts: CurrencyAmounts = new Map();
+                for (const c of currencies) {
+                  netAmounts.set(c, (m.totalIncome.get(c) ?? 0) - (m.totalExpenses.get(c) ?? 0));
+                }
+                if (!isAllCurrencies || currencies.length <= 1) {
+                  const net = sumAmounts(netAmounts);
+                  return (
+                    <td key={m.month} className={`text-right py-2.5 px-3 tabular-nums font-bold ${net >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                      {net >= 0 ? '+' : ''}{net.toFixed(0)}
+                    </td>
+                  );
+                }
                 return (
-                  <td key={m.month} className={`text-right py-2.5 px-3 tabular-nums font-bold ${net >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
-                    {net >= 0 ? '+' : ''}{net.toFixed(0)}
+                  <td key={m.month} className="text-right py-2.5 px-3 tabular-nums font-bold">
+                    <div className="flex flex-col items-end gap-0.5">
+                      {currencies.map((c) => {
+                        const net = netAmounts.get(c) ?? 0;
+                        if (net === 0 && !(m.totalIncome.has(c) || m.totalExpenses.has(c))) return null;
+                        return (
+                          <span key={c} className={net >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}>
+                            <span className="text-[10px] text-gray-400 dark:text-gray-500 mr-1">{CURRENCY_SYMBOLS[c]}</span>
+                            {net >= 0 ? '+' : ''}{net.toFixed(0)}
+                          </span>
+                        );
+                      })}
+                    </div>
                   </td>
                 );
               })}
-              <td className={`text-right py-2.5 px-3 tabular-nums font-bold border-l border-gray-200 dark:border-gray-700 ${(avgTotalIncome - avgTotalExpenses) >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
-                {(avgTotalIncome - avgTotalExpenses) >= 0 ? '+' : ''}{(avgTotalIncome - avgTotalExpenses).toFixed(0)}
+              <td className="text-right py-2.5 px-3 tabular-nums font-bold border-l border-gray-200 dark:border-gray-700">
+                {(() => {
+                  const netAvg: CurrencyAmounts = new Map();
+                  for (const c of currencies) {
+                    netAvg.set(c, (avgTotalIncome.get(c) ?? 0) - (avgTotalExpenses.get(c) ?? 0));
+                  }
+                  if (!isAllCurrencies || currencies.length <= 1) {
+                    const net = sumAmounts(netAvg);
+                    return (
+                      <span className={net >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}>
+                        {net >= 0 ? '+' : ''}{net.toFixed(0)}
+                      </span>
+                    );
+                  }
+                  return (
+                    <div className="flex flex-col items-end gap-0.5">
+                      {currencies.map((c) => {
+                        const net = netAvg.get(c) ?? 0;
+                        return (
+                          <span key={c} className={net >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}>
+                            <span className="text-[10px] text-gray-400 dark:text-gray-500 mr-1">{CURRENCY_SYMBOLS[c]}</span>
+                            {net >= 0 ? '+' : ''}{net.toFixed(0)}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
               </td>
             </tr>
           </tbody>
