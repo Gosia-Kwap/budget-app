@@ -1,8 +1,9 @@
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import type { Transaction } from '../../types';
 import type { CategoryTotal } from '../../lib/transforms';
-import { formatAmount } from '../../lib/currency';
+import { formatAmount, CURRENCY_SYMBOLS } from '../../lib/currency';
 import { CurrencyBadge } from '../shared/CurrencyBadge';
+import { useBudget } from '../../context/BudgetContext';
 
 interface Props {
   categories: CategoryTotal[];
@@ -12,7 +13,12 @@ interface Props {
 }
 
 export function CategoryTable({ categories, transactions, expanded, onToggle }: Props) {
+  const { filters } = useBudget();
   const total = categories.reduce((sum, c) => sum + c.total, 0);
+  const currencyLabel =
+    filters.currencyMode === 'filtered'
+      ? `${CURRENCY_SYMBOLS[filters.filterCurrency]} `
+      : ''; // In 'all' mode, CategoryTable is not rendered (CurrencyComparisonTable is used instead)
 
   return (
     <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5">
@@ -40,7 +46,7 @@ export function CategoryTable({ categories, transactions, expanded, onToggle }: 
                 </span>
                 <span className="text-xs text-gray-400 mr-2">{pct.toFixed(1)}%</span>
                 <span className="text-sm font-semibold tabular-nums text-gray-700 dark:text-gray-300">
-                  {cat.total.toFixed(2)}
+                  {currencyLabel}{cat.total.toFixed(2)}
                 </span>
               </button>
               {isOpen && (
@@ -54,7 +60,7 @@ export function CategoryTable({ categories, transactions, expanded, onToggle }: 
                       >
                         <span className="text-gray-600 dark:text-gray-400">{sub}</span>
                         <span className="tabular-nums text-gray-600 dark:text-gray-400">
-                          {amount.toFixed(2)}
+                          {currencyLabel}{amount.toFixed(2)}
                         </span>
                       </div>
                     ))}
