@@ -1,6 +1,8 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import type { CategoryTotal } from '../../lib/transforms';
 import { useBudget } from '../../context/BudgetContext';
+import { CURRENCY_SYMBOLS } from '../../lib/currency';
+import type { Currency } from '../../types';
 
 const COLORS = [
   '#6366f1', '#8b5cf6', '#a855f7', '#d946ef',
@@ -12,10 +14,14 @@ interface Props {
   categories: CategoryTotal[];
   selected: string | null;
   onSelect: (cat: string | null) => void;
+  currencyOverride?: Currency;
+  compact?: boolean;
 }
 
-export function CategoryPieChart({ categories, selected, onSelect }: Props) {
-  const { darkMode } = useBudget();
+export function CategoryPieChart({ categories, selected, onSelect, currencyOverride, compact }: Props) {
+  const { darkMode, filters } = useBudget();
+  const currency = currencyOverride ?? (filters.currencyMode === 'filtered' ? filters.filterCurrency : undefined);
+  const currencyLabel = currency ? `${CURRENCY_SYMBOLS[currency]} ` : '';
 
   const data = categories.map((c) => ({
     name: c.category,
@@ -27,17 +33,17 @@ export function CategoryPieChart({ categories, selected, onSelect }: Props) {
   return (
     <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5">
       <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">
-        Spending by Category
+        {currencyOverride ? `${currencyOverride} Spending` : 'Spending by Category'}
       </h3>
-      <div className="h-72">
+      <div className={compact ? 'h-48' : 'h-72'}>
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
               data={data}
               cx="50%"
               cy="50%"
-              innerRadius={60}
-              outerRadius={100}
+              innerRadius={compact ? 35 : 60}
+              outerRadius={compact ? 65 : 100}
               paddingAngle={2}
               dataKey="value"
               onClick={(_, idx) => {
@@ -63,12 +69,11 @@ export function CategoryPieChart({ categories, selected, onSelect }: Props) {
                 borderRadius: 8,
                 fontSize: 13,
               }}
-              formatter={(value: number) => value.toFixed(2)}
+              formatter={(value: number) => `${currencyLabel}${value.toFixed(2)}`}
             />
           </PieChart>
         </ResponsiveContainer>
       </div>
-      {/* Legend */}
       <div className="flex flex-wrap gap-3 mt-2 justify-center">
         {data.map((d, i) => (
           <button
