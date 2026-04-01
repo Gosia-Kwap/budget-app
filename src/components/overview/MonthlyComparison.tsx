@@ -31,7 +31,7 @@ function sumAmounts(map: CurrencyAmounts): number {
 }
 
 export function MonthlyComparison({ transactions }: Props) {
-  const { filters } = useBudget();
+  const { filters, data } = useBudget();
   const isAllCurrencies = filters.currencyMode === 'all';
 
   const currencies = useMemo(() => {
@@ -81,10 +81,25 @@ export function MonthlyComparison({ transactions }: Props) {
     }
 
     const allMonths = Array.from(monthMap.values()).sort((a, b) => a.month.localeCompare(b.month));
-    const categories = Array.from(categorySet).sort();
 
-    return { allMonths, categories };
-  }, [transactions]);
+    // Preserve category order from the Excel Categories sheet
+    const categoryOrder: string[] = [];
+    const seen = new Set<string>();
+    if (data?.categories) {
+      for (const cm of data.categories) {
+        if (!seen.has(cm.category) && categorySet.has(cm.category)) {
+          seen.add(cm.category);
+          categoryOrder.push(cm.category);
+        }
+      }
+    }
+    // Append any categories found in transactions but not in the Categories sheet
+    for (const cat of categorySet) {
+      if (!seen.has(cat)) categoryOrder.push(cat);
+    }
+
+    return { allMonths, categories: categoryOrder };
+  }, [transactions, data?.categories]);
 
   // Default: show last 3 months
   const [selectedMonths, setSelectedMonths] = useState<Set<string>>(() => {
