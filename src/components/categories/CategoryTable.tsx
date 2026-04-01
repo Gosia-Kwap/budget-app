@@ -68,7 +68,7 @@ export function CategoryTable({ categories, transactions, expanded, onToggle }: 
                   <div className="mt-2 border-t border-gray-100 dark:border-gray-800 pt-2">
                     <p className="text-xs text-gray-400 mb-1 px-3">Recent transactions</p>
                     {transactions
-                      .filter((t) => t.type === 'Expense' && t.category === cat.category)
+                      .filter((t) => (t.type === 'Expense' || t.type === 'ExpenseReturn') && t.category === cat.category)
                       .sort((a, b) => b.date.getTime() - a.date.getTime())
                       .slice(0, 10)
                       .map((t, i) => (

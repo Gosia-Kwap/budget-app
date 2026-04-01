@@ -20,7 +20,7 @@ export function MonthlyComparison({ transactions }: Props) {
     const monthMap = new Map<string, MonthCategoryData>();
     const categorySet = new Set<string>();
 
-    const expenses = transactions.filter((t) => t.type === 'Expense');
+    const expenses = transactions.filter((t) => t.type === 'Expense' || t.type === 'ExpenseReturn');
     const incomes = transactions.filter((t) => t.type === 'Income');
 
     for (const t of expenses) {
@@ -33,11 +33,13 @@ export function MonthlyComparison({ transactions }: Props) {
       const cat = t.category || 'Other';
       const sub = t.subcategory || 'Other';
       categorySet.add(cat);
-      m.categories.set(cat, (m.categories.get(cat) ?? 0) + Math.abs(t.amount));
+      const sign = t.type === 'ExpenseReturn' ? -1 : 1;
+      const amount = sign * Math.abs(t.amount);
+      m.categories.set(cat, (m.categories.get(cat) ?? 0) + amount);
       if (!m.subcategories.has(cat)) m.subcategories.set(cat, new Map());
       const subMap = m.subcategories.get(cat)!;
-      subMap.set(sub, (subMap.get(sub) ?? 0) + Math.abs(t.amount));
-      m.totalExpenses += Math.abs(t.amount);
+      subMap.set(sub, (subMap.get(sub) ?? 0) + amount);
+      m.totalExpenses += amount;
     }
 
     for (const t of incomes) {

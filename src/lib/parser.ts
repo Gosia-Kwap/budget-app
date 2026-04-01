@@ -19,9 +19,10 @@ function parseDate(value: unknown): Date {
 }
 
 function normalizeType(type: string): TransactionType {
-  const t = type?.trim();
-  if (t === 'Income') return 'Income';
-  if (t === 'Transfer') return 'Transfer';
+  const t = type?.trim().toLowerCase();
+  if (t === 'income') return 'Income';
+  if (t === 'transfer') return 'Transfer';
+  if (t === 'expense return' || t === 'expensereturn') return 'ExpenseReturn';
   return 'Expense';
 }
 

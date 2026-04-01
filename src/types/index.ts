@@ -1,5 +1,5 @@
 export type Currency = 'CHF' | 'EUR' | 'PLN';
-export type TransactionType = 'Expense' | 'Income' | 'Transfer';
+export type TransactionType = 'Expense' | 'Income' | 'Transfer' | 'ExpenseReturn';
 export type ActivePage = 'overview' | 'categories' | 'accounts';
 
 export interface Transaction {

@@ -26,7 +26,7 @@ export function CategoriesPage() {
     for (const c of CURRENCIES) {
       const txns = filtered.filter((t) => t.currency === c);
       const cats = groupByCategory(txns);
-      if (txns.some((t) => t.type === 'Expense')) {
+      if (txns.some((t) => t.type === 'Expense' || t.type === 'ExpenseReturn')) {
         result.set(c, { transactions: txns, categories: cats });
       }
     }

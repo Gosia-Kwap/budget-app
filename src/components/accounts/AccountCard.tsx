@@ -14,9 +14,10 @@ export function AccountCard({ account, transactions }: Props) {
     const acctTxns = transactions.filter((t) => t.account === account.account);
     const income = acctTxns.filter((t) => t.type === 'Income').reduce((s, t) => s + t.amount, 0);
     const expenses = acctTxns.filter((t) => t.type === 'Expense').reduce((s, t) => s + t.amount, 0);
+    const expenseReturns = acctTxns.filter((t) => t.type === 'ExpenseReturn').reduce((s, t) => s + Math.abs(t.amount), 0);
     const transfersIn = acctTxns.filter((t) => t.type === 'Transfer' && t.amount > 0).reduce((s, t) => s + t.amount, 0);
     const transfersOut = acctTxns.filter((t) => t.type === 'Transfer' && t.amount < 0).reduce((s, t) => s + t.amount, 0);
-    const net = income + expenses;
+    const net = income + expenses + expenseReturns;
     return { income, expenses: Math.abs(expenses), transfersIn, transfersOut: Math.abs(transfersOut), net };
   }, [account.account, transactions]);
 

@@ -13,6 +13,57 @@ export function filterByDateRange(
   });
 }
 
+// Resolve grouped expense returns: for each GroupID that has both Expense and
+// ExpenseReturn transactions, compute the net and adjust the original expense
+// amounts. The ExpenseReturn rows are removed from the output so downstream
+// code (monthly bucketing, category totals) sees only the net cost attributed
+// to the original expense's month/category. Non-grouped ExpenseReturns are
+// kept as-is for the existing per-month subtraction logic.
+export function resolveExpenseReturns(transactions: Transaction[]): Transaction[] {
+  // Build groups
+  const groups = new Map<string, Transaction[]>();
+  for (const t of transactions) {
+    if (t.groupId) {
+      if (!groups.has(t.groupId)) groups.set(t.groupId, []);
+      groups.get(t.groupId)!.push(t);
+    }
+  }
+
+  const adjustedAmounts = new Map<Transaction, number>();
+  const skip = new Set<Transaction>();
+
+  for (const [, group] of groups) {
+    const expenses = group.filter((t) => t.type === 'Expense');
+    const returns = group.filter((t) => t.type === 'ExpenseReturn');
+
+    if (returns.length === 0) continue;
+
+    // Net of the group: expenses are negative, returns are positive
+    const groupNet = group.reduce((s, t) => s + t.amount, 0);
+    const totalExpenseAbs = expenses.reduce((s, t) => s + Math.abs(t.amount), 0);
+
+    // Distribute net proportionally across the original expense transactions
+    if (totalExpenseAbs > 0) {
+      for (const t of expenses) {
+        const proportion = Math.abs(t.amount) / totalExpenseAbs;
+        adjustedAmounts.set(t, groupNet * proportion);
+      }
+    }
+
+    // Remove grouped ExpenseReturn rows — their effect is absorbed into the expenses
+    for (const t of returns) {
+      skip.add(t);
+    }
+  }
+
+  return transactions
+    .filter((t) => !skip.has(t))
+    .map((t) => {
+      const adj = adjustedAmounts.get(t);
+      return adj !== undefined ? { ...t, amount: adj } : t;
+    });
+}
+
 // Resolve GroupID: returns net amounts per group
 // Transactions in a group contribute their net, not individual amounts
 export function resolveGroupNets(transactions: Transaction[]): Map<string, number> {
@@ -70,6 +121,10 @@ export function summarizeByCurrency(transactions: Transaction[]): Map<Currency, 
     } else if (t.type === 'Income') {
       s.income += effective;
       s.net += effective;
+    } else if (t.type === 'ExpenseReturn') {
+      // Expense return offsets expenses: subtract from expenses, add to net
+      s.expenses -= Math.abs(effective);
+      s.net += Math.abs(effective);
     } else {
       // Expense: amount is negative
       s.expenses += Math.abs(effective);
@@ -91,18 +146,19 @@ export function groupByCategory(transactions: Transaction[]): CategoryTotal[] {
   const groupSizes = getGroupSizes(transactions);
   const cats = new Map<string, { total: number; subs: Map<string, number> }>();
 
-  // Only count expenses (exclude transfers and income)
-  const expenses = transactions.filter((t) => t.type === 'Expense');
+  // Count expenses and expense returns (returns offset the spending)
+  const expenseRelated = transactions.filter((t) => t.type === 'Expense' || t.type === 'ExpenseReturn');
 
-  for (const t of expenses) {
+  for (const t of expenseRelated) {
     const effective = Math.abs(getEffectiveAmount(t, groupNets, groupSizes));
+    const amount = t.type === 'ExpenseReturn' ? -effective : effective;
     const cat = t.category || 'Uncategorized';
     const sub = t.subcategory || 'Other';
 
     if (!cats.has(cat)) cats.set(cat, { total: 0, subs: new Map() });
     const entry = cats.get(cat)!;
-    entry.total += effective;
-    entry.subs.set(sub, (entry.subs.get(sub) ?? 0) + effective);
+    entry.total += amount;
+    entry.subs.set(sub, (entry.subs.get(sub) ?? 0) + amount);
   }
 
   return Array.from(cats.entries())
@@ -137,6 +193,9 @@ export function groupByMonth(transactions: Transaction[]): MonthlyData[] {
 
     if (t.type === 'Income') {
       m.income += effective;
+    } else if (t.type === 'ExpenseReturn') {
+      m.expenses -= Math.abs(effective);
+      m.net += Math.abs(effective);
     } else {
       m.expenses += Math.abs(effective);
     }

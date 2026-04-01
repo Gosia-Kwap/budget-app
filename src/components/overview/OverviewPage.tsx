@@ -1,6 +1,8 @@
+import { useMemo } from 'react';
 import { useFilteredData } from '../../hooks/useFilteredData';
 import { useCurrencyConvert } from '../../hooks/useCurrencyConvert';
 import { useBudget } from '../../context/BudgetContext';
+import { resolveExpenseReturns } from '../../lib/transforms';
 import { SummaryCards } from './SummaryCards';
 import { MonthlyTrendChart } from './MonthlyTrendChart';
 import { TopCategoriesChart } from './TopCategoriesChart';
@@ -11,7 +13,12 @@ export function OverviewPage() {
   const filtered = useFilteredData();
   const transactions = useCurrencyConvert(filtered);
   // Monthly comparison always uses all transactions (not date-filtered)
-  const allTransactions = useCurrencyConvert(data?.transactions ?? []);
+  // Resolve expense returns here too so cross-month groups are netted
+  const resolvedAll = useMemo(
+    () => resolveExpenseReturns(data?.transactions ?? []),
+    [data]
+  );
+  const allTransactions = useCurrencyConvert(resolvedAll);
 
   if (transactions.length === 0) {
     return (
