@@ -69,7 +69,7 @@ export function CategoryPieChart({ categories, selected, onSelect, currencyOverr
                 borderRadius: 8,
                 fontSize: 13,
               }}
-              formatter={(value: number) => `${currencyLabel}${value.toFixed(2)}`}
+              formatter={(value) => `${currencyLabel}${Number(value).toFixed(2)}`}
             />
           </PieChart>
         </ResponsiveContainer>
