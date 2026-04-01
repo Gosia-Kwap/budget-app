@@ -64,7 +64,7 @@ export function MonthPicker() {
           className="appearance-none bg-transparent pl-7 pr-3 py-1.5 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
         >
           <option value="all">All Time</option>
-          {months.map((m) => (
+          {[...months].reverse().map((m) => (
             <option key={m.key} value={m.key}>
               {m.label}
             </option>
