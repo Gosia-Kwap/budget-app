@@ -7,7 +7,6 @@ export function useCurrencyConvert(transactions: Transaction[]): Transaction[] {
 
   return useMemo(() => {
     if (filters.currencyMode === 'all') return transactions;
-
     return transactions.filter((t) => t.currency === filters.filterCurrency);
   }, [transactions, filters.currencyMode, filters.filterCurrency]);
 }
