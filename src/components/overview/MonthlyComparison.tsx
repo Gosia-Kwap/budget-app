@@ -275,6 +275,52 @@ export function MonthlyComparison({ transactions }: Props) {
               );
             })}
 
+            {/* Mandatory vs Adjustable subtotals */}
+            {categories.some((c) => c.toLowerCase() === 'obowiązkowe') && (() => {
+              const mandatoryKey = categories.find((c) => c.toLowerCase() === 'obowiązkowe')!;
+              const mandatoryByMonth = months.map((m) => m.categories.get(mandatoryKey) ?? 0);
+              const adjustableByMonth = months.map((m) => m.totalExpenses - (m.categories.get(mandatoryKey) ?? 0));
+              const avgMandatory = months.length > 0 ? mandatoryByMonth.reduce((s, v) => s + v, 0) / months.length : 0;
+              const avgAdjustable = months.length > 0 ? adjustableByMonth.reduce((s, v) => s + v, 0) / months.length : 0;
+              return (
+                <>
+                  <tr className="border-t border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30">
+                    <td className="py-2 pr-4 font-semibold text-gray-600 dark:text-gray-300 sticky left-0 bg-gray-50/50 dark:bg-gray-800/30">
+                      Mandatory
+                    </td>
+                    {mandatoryByMonth.map((val, idx) => (
+                      <td key={months[idx].month} className="text-right py-2 px-3 tabular-nums font-semibold text-gray-600 dark:text-gray-300">
+                        {val === 0 ? '—' : val.toFixed(0)}
+                      </td>
+                    ))}
+                    <td className="text-right py-2 px-3 tabular-nums font-semibold text-gray-500 dark:text-gray-400 border-l border-gray-200 dark:border-gray-700">
+                      {avgMandatory.toFixed(0)}
+                    </td>
+                  </tr>
+                  <tr className="bg-gray-50/50 dark:bg-gray-800/30">
+                    <td className="py-2 pr-4 font-semibold text-gray-600 dark:text-gray-300 sticky left-0 bg-gray-50/50 dark:bg-gray-800/30">
+                      Adjustable
+                    </td>
+                    {adjustableByMonth.map((val, idx) => {
+                      const prevVal = idx > 0 ? adjustableByMonth[idx - 1] : null;
+                      const diff = prevVal !== null ? val - prevVal : null;
+                      return (
+                        <td key={months[idx].month} className="text-right py-2 px-3 tabular-nums font-semibold text-gray-600 dark:text-gray-300">
+                          <div className="flex items-center justify-end gap-1">
+                            {val === 0 ? '—' : val.toFixed(0)}
+                            {diff !== null && diff !== 0 && val > 0 && <TrendIndicator diff={diff} />}
+                          </div>
+                        </td>
+                      );
+                    })}
+                    <td className="text-right py-2 px-3 tabular-nums font-semibold text-gray-500 dark:text-gray-400 border-l border-gray-200 dark:border-gray-700">
+                      {avgAdjustable.toFixed(0)}
+                    </td>
+                  </tr>
+                </>
+              );
+            })()}
+
             {/* Total expenses row */}
             <tr className="border-t-2 border-gray-300 dark:border-gray-600 bg-red-50/50 dark:bg-red-950/20">
               <td className="py-2.5 pr-4 font-bold text-red-700 dark:text-red-400 sticky left-0 bg-red-50/50 dark:bg-red-950/20">

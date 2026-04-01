@@ -16,10 +16,6 @@ export function MonthPicker() {
     ? `${filters.startDate.getFullYear()}-${String(filters.startDate.getMonth() + 1).padStart(2, '0')}`
     : 'all';
 
-  const currentLabel = currentKey === 'all'
-    ? 'All Time'
-    : months.find((m) => m.key === currentKey)?.label ?? 'All Time';
-
   const currentIdx = months.findIndex((m) => m.key === currentKey);
 
   const setMonth = (key: string) => {
