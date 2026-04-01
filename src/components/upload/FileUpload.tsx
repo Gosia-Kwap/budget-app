@@ -7,27 +7,37 @@ export function FileUpload() {
   const dispatch = useBudgetDispatch();
   const [dragging, setDragging] = useState(false);
   const [status, setStatus] = useState<string>('');
+  const [existingFile, setExistingFile] = useState<ArrayBuffer | null>(null);
 
-  // Try auto-load from /data/budget.xlsx
+  // Check if /data/budget.xlsx exists, but don't auto-load
   useEffect(() => {
-    async function autoLoad() {
+    async function checkExisting() {
       try {
         setStatus('Looking for budget.xlsx...');
         const res = await fetch('/data/budget.xlsx');
         if (res.ok) {
-          setStatus('Parsing budget.xlsx...');
           const buffer = await res.arrayBuffer();
-          const data = await parseExcelFile(buffer);
-          dispatch({ type: 'SET_DATA', payload: data });
-          return;
+          setExistingFile(buffer);
         }
       } catch {
-        // File not found, show upload UI
+        // File not found
       }
       setStatus('');
     }
-    autoLoad();
-  }, [dispatch]);
+    checkExisting();
+  }, []);
+
+  const loadExisting = useCallback(async () => {
+    if (!existingFile) return;
+    dispatch({ type: 'SET_LOADING', payload: true });
+    try {
+      setStatus('Parsing budget.xlsx...');
+      const data = await parseExcelFile(existingFile);
+      dispatch({ type: 'SET_DATA', payload: data });
+    } catch (e) {
+      dispatch({ type: 'SET_ERROR', payload: `Failed to parse file: ${e}` });
+    }
+  }, [existingFile, dispatch]);
 
   const handleFile = useCallback(
     async (file: File) => {
@@ -85,14 +95,35 @@ export function FileUpload() {
         </h2>
         {status ? (
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{status}</p>
+        ) : existingFile ? (
+          <>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+              Found <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">budget.xlsx</code> — load it or upload a different file.
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <button
+                onClick={loadExisting}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-indigo-600 text-white font-medium text-sm cursor-pointer hover:bg-indigo-700 transition-colors"
+              >
+                <FileSpreadsheet className="w-4 h-4" />
+                Load budget.xlsx
+              </button>
+              <label className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                <Upload className="w-4 h-4" />
+                Upload different file
+                <input
+                  type="file"
+                  accept=".xlsx,.xls"
+                  className="hidden"
+                  onChange={onFileInput}
+                />
+              </label>
+            </div>
+          </>
         ) : (
           <>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
               Drop your budget.xlsx here or click to upload.
-              <br />
-              <span className="text-xs">
-                Place the file at <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">public/data/budget.xlsx</code> for auto-loading.
-              </span>
             </p>
             <label className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-indigo-600 text-white font-medium text-sm cursor-pointer hover:bg-indigo-700 transition-colors">
               <Upload className="w-4 h-4" />
