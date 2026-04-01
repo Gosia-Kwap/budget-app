@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { Transaction } from '../../types';
-import { ArrowUp, ArrowDown, Check } from 'lucide-react';
+import { ArrowUp, ArrowDown, Check, ChevronDown, ChevronRight } from 'lucide-react';
 
 interface Props {
   transactions: Transaction[];
@@ -10,6 +10,7 @@ interface MonthCategoryData {
   month: string;
   label: string;
   categories: Map<string, number>;
+  subcategories: Map<string, Map<string, number>>; // category -> subcategory -> amount
   totalExpenses: number;
   totalIncome: number;
 }
@@ -26,12 +27,16 @@ export function MonthlyComparison({ transactions }: Props) {
       const key = `${t.date.getFullYear()}-${String(t.date.getMonth() + 1).padStart(2, '0')}`;
       if (!monthMap.has(key)) {
         const label = t.date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-        monthMap.set(key, { month: key, label, categories: new Map(), totalExpenses: 0, totalIncome: 0 });
+        monthMap.set(key, { month: key, label, categories: new Map(), subcategories: new Map(), totalExpenses: 0, totalIncome: 0 });
       }
       const m = monthMap.get(key)!;
       const cat = t.category || 'Other';
+      const sub = t.subcategory || 'Other';
       categorySet.add(cat);
       m.categories.set(cat, (m.categories.get(cat) ?? 0) + Math.abs(t.amount));
+      if (!m.subcategories.has(cat)) m.subcategories.set(cat, new Map());
+      const subMap = m.subcategories.get(cat)!;
+      subMap.set(sub, (subMap.get(sub) ?? 0) + Math.abs(t.amount));
       m.totalExpenses += Math.abs(t.amount);
     }
 
@@ -39,7 +44,7 @@ export function MonthlyComparison({ transactions }: Props) {
       const key = `${t.date.getFullYear()}-${String(t.date.getMonth() + 1).padStart(2, '0')}`;
       if (!monthMap.has(key)) {
         const label = t.date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-        monthMap.set(key, { month: key, label, categories: new Map(), totalExpenses: 0, totalIncome: 0 });
+        monthMap.set(key, { month: key, label, categories: new Map(), subcategories: new Map(), totalExpenses: 0, totalIncome: 0 });
       }
       monthMap.get(key)!.totalIncome += t.amount;
     }
@@ -74,10 +79,42 @@ export function MonthlyComparison({ transactions }: Props) {
     setSelectedMonths(new Set(keys.slice(-n)));
   };
 
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+
+  const toggleCategory = (cat: string) => {
+    setExpandedCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(cat)) next.delete(cat);
+      else next.add(cat);
+      return next;
+    });
+  };
+
   const { months, categories } = useMemo(() => {
     const months = allMonthData.allMonths.filter((m) => selectedMonths.has(m.month));
     return { months, categories: allMonthData.categories };
   }, [allMonthData, selectedMonths]);
+
+  const allExpanded = categories.length > 0 && expandedCategories.size === categories.length;
+
+  // Collect all subcategories for each expanded category across all visible months
+  const subcategoriesFor = useMemo(() => {
+    const result = new Map<string, string[]>();
+    for (const cat of expandedCategories) {
+      const subSet = new Set<string>();
+      for (const m of months) {
+        const subMap = m.subcategories.get(cat);
+        if (subMap) for (const sub of subMap.keys()) subSet.add(sub);
+      }
+      const sorted = Array.from(subSet).sort((a, b) => {
+        const totalA = months.reduce((s, m) => s + (m.subcategories.get(cat)?.get(a) ?? 0), 0);
+        const totalB = months.reduce((s, m) => s + (m.subcategories.get(cat)?.get(b) ?? 0), 0);
+        return totalB - totalA;
+      });
+      result.set(cat, sorted);
+    }
+    return result;
+  }, [expandedCategories, months]);
 
   const avgByCategory = useMemo(() => {
     const avg = new Map<string, number>();
@@ -104,6 +141,12 @@ export function MonthlyComparison({ transactions }: Props) {
           <QuickButton label="Last 3" active={selectedMonths.size === 3 && isLastN(selectedMonths, allMonthData.allMonths, 3)} onClick={() => selectLast(3)} />
           <QuickButton label="Last 6" active={selectedMonths.size === 6 && isLastN(selectedMonths, allMonthData.allMonths, 6)} onClick={() => selectLast(6)} />
           <QuickButton label="All" active={selectedMonths.size === allMonthData.allMonths.length} onClick={selectAll} />
+          <span className="w-px h-4 bg-gray-200 dark:bg-gray-700 mx-1" />
+          <QuickButton
+            label={allExpanded ? 'Collapse all' : 'Expand all'}
+            active={allExpanded}
+            onClick={() => setExpandedCategories(allExpanded ? new Set() : new Set(categories))}
+          />
         </div>
       </div>
 
@@ -165,33 +208,68 @@ export function MonthlyComparison({ transactions }: Props) {
             {/* Category rows */}
             {categories.map((cat) => {
               const avg = avgByCategory.get(cat) ?? 0;
+              const isExpanded = expandedCategories.has(cat);
               return (
-                <tr key={cat} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/30">
-                  <td className="py-2 pr-4 font-medium text-gray-700 dark:text-gray-300 sticky left-0 bg-white dark:bg-gray-900">
-                    {cat}
-                  </td>
-                  {months.map((m, idx) => {
-                    const val = m.categories.get(cat) ?? 0;
-                    const prevVal = idx > 0 ? (months[idx - 1].categories.get(cat) ?? 0) : null;
-                    const diff = prevVal !== null ? val - prevVal : null;
+                <>
+                  <tr
+                    key={cat}
+                    className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/30 cursor-pointer"
+                    onClick={() => toggleCategory(cat)}
+                  >
+                    <td className="py-2 pr-4 font-medium text-gray-700 dark:text-gray-300 sticky left-0 bg-white dark:bg-gray-900">
+                      <div className="flex items-center gap-1.5">
+                        {isExpanded
+                          ? <ChevronDown className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                          : <ChevronRight className="w-3.5 h-3.5 text-gray-400 shrink-0" />}
+                        {cat}
+                      </div>
+                    </td>
+                    {months.map((m, idx) => {
+                      const val = m.categories.get(cat) ?? 0;
+                      const prevVal = idx > 0 ? (months[idx - 1].categories.get(cat) ?? 0) : null;
+                      const diff = prevVal !== null ? val - prevVal : null;
 
+                      return (
+                        <td key={m.month} className="text-right py-2 px-3 tabular-nums">
+                          <div className="flex items-center justify-end gap-1">
+                            <span className={val > avg * 1.2 ? 'text-red-600 dark:text-red-400 font-semibold' : val === 0 ? 'text-gray-300 dark:text-gray-600' : 'text-gray-700 dark:text-gray-300'}>
+                              {val === 0 ? '—' : val.toFixed(0)}
+                            </span>
+                            {diff !== null && diff !== 0 && val > 0 && (
+                              <TrendIndicator diff={diff} />
+                            )}
+                          </div>
+                        </td>
+                      );
+                    })}
+                    <td className="text-right py-2 px-3 tabular-nums text-gray-500 dark:text-gray-400 font-medium border-l border-gray-200 dark:border-gray-700">
+                      {avg.toFixed(0)}
+                    </td>
+                  </tr>
+                  {isExpanded && (subcategoriesFor.get(cat) ?? []).map((sub) => {
+                    const subAvg = months.length > 0
+                      ? months.reduce((s, m) => s + (m.subcategories.get(cat)?.get(sub) ?? 0), 0) / months.length
+                      : 0;
                     return (
-                      <td key={m.month} className="text-right py-2 px-3 tabular-nums">
-                        <div className="flex items-center justify-end gap-1">
-                          <span className={val > avg * 1.2 ? 'text-red-600 dark:text-red-400 font-semibold' : val === 0 ? 'text-gray-300 dark:text-gray-600' : 'text-gray-700 dark:text-gray-300'}>
-                            {val === 0 ? '—' : val.toFixed(0)}
-                          </span>
-                          {diff !== null && diff !== 0 && val > 0 && (
-                            <TrendIndicator diff={diff} />
-                          )}
-                        </div>
-                      </td>
+                      <tr key={`${cat}-${sub}`} className="border-b border-gray-50 dark:border-gray-800/50 bg-gray-50/50 dark:bg-gray-800/20">
+                        <td className="py-1.5 pr-4 pl-7 text-xs text-gray-500 dark:text-gray-400 sticky left-0 bg-gray-50/50 dark:bg-gray-800/20">
+                          {sub}
+                        </td>
+                        {months.map((m) => {
+                          const val = m.subcategories.get(cat)?.get(sub) ?? 0;
+                          return (
+                            <td key={m.month} className="text-right py-1.5 px-3 tabular-nums text-xs text-gray-500 dark:text-gray-400">
+                              {val === 0 ? '—' : val.toFixed(0)}
+                            </td>
+                          );
+                        })}
+                        <td className="text-right py-1.5 px-3 tabular-nums text-xs text-gray-400 dark:text-gray-500 border-l border-gray-200 dark:border-gray-700">
+                          {subAvg.toFixed(0)}
+                        </td>
+                      </tr>
                     );
                   })}
-                  <td className="text-right py-2 px-3 tabular-nums text-gray-500 dark:text-gray-400 font-medium border-l border-gray-200 dark:border-gray-700">
-                    {avg.toFixed(0)}
-                  </td>
-                </tr>
+                </>
               );
             })}
 
