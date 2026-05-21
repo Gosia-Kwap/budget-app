@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-paper: #e8e0c8;
   --color-surface: #ddd3b5;
@@ -47,6 +49,25 @@ body {
   background-image:
     radial-gradient(at 15% 12%, rgba(154, 125, 58, 0.06) 0%, transparent 40%),
     radial-gradient(at 85% 88%, rgba(74, 93, 58, 0.05) 0%, transparent 45%);
+}
+
+/* Classic mode — restores the original informative styling */
+html.classic-mode,
+html.classic-mode body {
+  background-color: #f9fafb;
+  color: #111827;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-weight: 400;
+  font-feature-settings: normal;
+  font-variant-numeric: normal;
+  background-image: none;
+}
+
+html.classic-mode.dark,
+html.classic-mode.dark body {
+  background-color: #030712;
+  color: #f3f4f6;
+  color-scheme: dark;
 }
 
 ::selection {

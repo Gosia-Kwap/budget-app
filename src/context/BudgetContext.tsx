@@ -13,6 +13,7 @@ const initialState: AppState = {
   filters: initialFilters,
   activePage: 'overview',
   darkMode: localStorage.getItem('darkMode') !== null ? localStorage.getItem('darkMode') === 'true' : false,
+  viewMode: (localStorage.getItem('viewMode') === 'classic' ? 'classic' : 'ledger'),
   loading: false,
   error: null,
 };
@@ -33,6 +34,11 @@ function reducer(state: AppState, action: AppAction): AppState {
       const next = !state.darkMode;
       localStorage.setItem('darkMode', String(next));
       return { ...state, darkMode: next };
+    }
+    case 'TOGGLE_VIEW_MODE': {
+      const next = state.viewMode === 'ledger' ? 'classic' : 'ledger';
+      localStorage.setItem('viewMode', next);
+      return { ...state, viewMode: next };
     }
     default:
       return state;

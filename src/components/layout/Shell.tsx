@@ -54,7 +54,17 @@ export function Shell() {
         <header className="mb-10">
           <div className="flex items-start justify-between text-faded font-smallcaps tracking-[0.22em] text-[16px]">
             <span>{monthYear}</span>
-            <span>fol. {pageRoman[activePage]} · no. {dayOfYear}</span>
+            <span className="flex items-center gap-4">
+              <button
+                onClick={() => dispatch({ type: 'TOGGLE_VIEW_MODE' })}
+                className="font-smallcaps tracking-[0.22em] text-[14px] text-quill border-b border-transparent hover:border-vermillion hover:text-vermillion transition-colors duration-150"
+                title="Switch to classic view"
+              >
+                ⇄ classic view
+              </button>
+              <span className="text-rule">·</span>
+              <span>fol. {pageRoman[activePage]} · no. {dayOfYear}</span>
+            </span>
           </div>
 
           <div className="mt-6 flex flex-col items-center">

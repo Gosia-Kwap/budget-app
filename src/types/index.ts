@@ -1,6 +1,7 @@
 export type Currency = 'CHF' | 'EUR' | 'PLN';
 export type TransactionType = 'Expense' | 'Income' | 'Transfer' | 'ExpenseReturn';
 export type ActivePage = 'overview' | 'categories' | 'accounts';
+export type ViewMode = 'ledger' | 'classic';
 
 export interface Transaction {
   date: Date;
@@ -47,6 +48,7 @@ export interface AppState {
   filters: FilterState;
   activePage: ActivePage;
   darkMode: boolean;
+  viewMode: ViewMode;
   loading: boolean;
   error: string | null;
 }
@@ -57,4 +59,5 @@ export type AppAction =
   | { type: 'SET_ERROR'; payload: string | null }
   | { type: 'SET_PAGE'; payload: ActivePage }
   | { type: 'SET_FILTERS'; payload: Partial<FilterState> }
-  | { type: 'TOGGLE_DARK_MODE' };
+  | { type: 'TOGGLE_DARK_MODE' }
+  | { type: 'TOGGLE_VIEW_MODE' };

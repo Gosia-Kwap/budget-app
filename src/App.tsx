@@ -1,9 +1,18 @@
+import { useEffect } from 'react';
 import { BudgetProvider, useBudget } from './context/BudgetContext';
-import { FileUpload } from './components/upload/FileUpload';
-import { Shell } from './components/layout/Shell';
+import { FileUpload as LedgerFileUpload } from './components/upload/FileUpload';
+import { Shell as LedgerShell } from './components/layout/Shell';
+import { FileUpload as ClassicFileUpload } from './components/classic/upload/FileUpload';
+import { Shell as ClassicShell } from './components/classic/layout/Shell';
 
 function AppContent() {
-  const { data, error } = useBudget();
+  const { data, error, darkMode, viewMode } = useBudget();
+  const isClassic = viewMode === 'classic';
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('classic-mode', isClassic);
+    document.documentElement.classList.toggle('dark', darkMode && isClassic);
+  }, [isClassic, darkMode]);
 
   if (error) {
     return (
@@ -13,16 +22,16 @@ function AppContent() {
             an irregularity
           </p>
           <p className="font-serif italic text-faded">{error}</p>
-      </div>
+        </div>
       </div>
     );
   }
 
   if (!data) {
-    return <FileUpload />;
+    return isClassic ? <ClassicFileUpload /> : <LedgerFileUpload />;
   }
 
-  return <Shell />;
+  return isClassic ? <ClassicShell /> : <LedgerShell />;
 }
 
 export default function App() {
