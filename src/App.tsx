@@ -1,22 +1,19 @@
-import { useEffect } from 'react';
 import { BudgetProvider, useBudget } from './context/BudgetContext';
 import { FileUpload } from './components/upload/FileUpload';
 import { Shell } from './components/layout/Shell';
 
 function AppContent() {
-  const { data, darkMode, error } = useBudget();
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', darkMode);
-  }, [darkMode]);
+  const { data, error } = useBudget();
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-xl p-6 max-w-md text-center">
-          <p className="text-red-600 dark:text-red-400 font-medium mb-2">Error</p>
-          <p className="text-sm text-red-500 dark:text-red-400/80">{error}</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <div className="max-w-md text-center border-t border-b border-vermillion py-8 px-6">
+          <p className="font-smallcaps tracking-[0.22em] text-vermillion text-xs mb-3">
+            an irregularity
+          </p>
+          <p className="font-serif italic text-faded">{error}</p>
+      </div>
       </div>
     );
   }

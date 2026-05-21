@@ -1,107 +1,119 @@
 import { useMemo } from 'react';
-import { TrendingUp, TrendingDown, ArrowRightLeft, Scale } from 'lucide-react';
 import type { Transaction, Currency } from '../../types';
 import { summarizeByCurrency } from '../../lib/transforms';
-import { formatAmount } from '../../lib/currency';
-import { CurrencyBadge } from '../shared/CurrencyBadge';
+import { CURRENCY_SYMBOLS } from '../../lib/currency';
 
 interface Props {
   transactions: Transaction[];
 }
 
+type Col = {
+  label: string;
+  key: 'income' | 'expenses' | 'net' | 'transfers';
+  tone: 'moss' | 'vermillion' | 'brass' | 'indigo';
+};
+
+const COLS: Col[] = [
+  { label: 'Income',    key: 'income',    tone: 'moss' },
+  { label: 'Expenses',  key: 'expenses',  tone: 'vermillion' },
+  { label: 'Net',       key: 'net',       tone: 'brass' },
+  { label: 'Transfers', key: 'transfers', tone: 'indigo' },
+];
+
+const toneClass: Record<Col['tone'], string> = {
+  moss: 'text-moss',
+  vermillion: 'text-vermillion',
+  brass: 'text-brass',
+  indigo: 'text-indigoink',
+};
+
 export function SummaryCards({ transactions }: Props) {
   const summary = useMemo(() => summarizeByCurrency(transactions), [transactions]);
-
   const currencies = Array.from(summary.keys()).sort();
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <Card
-        title="Income"
-        icon={<TrendingUp className="w-5 h-5 text-emerald-500" />}
-        color="emerald"
-      >
-        {currencies.map((c) => (
-          <CurrencyRow key={c} currency={c} amount={summary.get(c)!.income} positive />
-        ))}
-      </Card>
-      <Card
-        title="Expenses"
-        icon={<TrendingDown className="w-5 h-5 text-red-500" />}
-        color="red"
-      >
-        {currencies.map((c) => (
-          <CurrencyRow key={c} currency={c} amount={summary.get(c)!.expenses} />
-        ))}
-      </Card>
-      <Card
-        title="Net"
-        icon={<Scale className="w-5 h-5 text-blue-500" />}
-        color="blue"
-      >
-        {currencies.map((c) => {
-          const net = summary.get(c)!.net;
-          return <CurrencyRow key={c} currency={c} amount={net} positive={net >= 0} />;
-        })}
-      </Card>
-      <Card
-        title="Transfers"
-        icon={<ArrowRightLeft className="w-5 h-5 text-violet-500" />}
-        color="violet"
-      >
-        {currencies.map((c) => {
-          const t = summary.get(c)!.transfers;
-          return t > 0 ? <CurrencyRow key={c} currency={c} amount={t} neutral /> : null;
-        })}
-      </Card>
-    </div>
-  );
-}
+    <section className="mb-10">
+      <SectionHeading kicker="Recapitulation" title="Summary of the period" />
 
-function Card({
-  title,
-  icon,
-  children,
-}: {
-  title: string;
-  icon: React.ReactNode;
-  color: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5">
-      <div className="flex items-center gap-2 mb-3">
-        {icon}
-        <span className="text-sm font-medium text-gray-500 dark:text-gray-400">{title}</span>
+      <div className="border-t border-rule">
+        <div className="border-t border-rule-soft mt-[2px]" />
       </div>
-      <div className="space-y-1">{children}</div>
-    </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-x-8 md:gap-x-12 py-6">
+        {COLS.map((col, idx) => (
+          <div
+            key={col.key}
+            className={`relative ${idx > 0 ? 'md:pl-8 md:border-l md:border-rule-soft' : ''}`}
+          >
+            <div className="font-smallcaps tracking-[0.24em] text-[16px] text-faded mb-4">
+              {col.label}
+            </div>
+            <div className="space-y-2">
+              {currencies.map((c) => {
+                const s = summary.get(c)!;
+                let val: number;
+                if (col.key === 'net') val = s.net;
+                else if (col.key === 'transfers') val = s.transfers;
+                else if (col.key === 'income') val = s.income;
+                else val = Math.abs(s.expenses);
+                if (col.key === 'transfers' && val === 0) return null;
+
+                const isNegativeNet = col.key === 'net' && val < 0;
+                const display = formatLedger(Math.abs(val), c);
+
+                return (
+                  <div key={c} className="flex items-baseline justify-between gap-3">
+                    <span className="font-smallcaps tracking-[0.2em] text-[16px] text-quill">
+                      {c.toLowerCase()}
+                    </span>
+                    <span className={`font-display text-xl font-normal ${toneClass[col.tone]} ${isNegativeNet ? 'text-vermillion' : ''}`}>
+                      {col.key === 'net' && val !== 0 && (val > 0 ? '+ ' : '− ')}
+                      {display}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="border-t border-rule-soft" />
+      <div className="border-t border-rule mt-[2px]" />
+    </section>
   );
 }
 
-function CurrencyRow({
-  currency,
-  amount,
-  positive,
-  neutral,
-}: {
-  currency: Currency;
-  amount: number;
-  positive?: boolean;
-  neutral?: boolean;
-}) {
-  const color = neutral
-    ? 'text-gray-600 dark:text-gray-400'
-    : positive
-    ? 'text-emerald-600 dark:text-emerald-400'
-    : 'text-red-600 dark:text-red-400';
+function formatLedger(n: number, c: Currency): string {
+  const sym = CURRENCY_SYMBOLS[c];
+  const fixed = n >= 1000
+    ? n.toLocaleString('en-US', { maximumFractionDigits: 0 })
+    : n.toFixed(2);
+  return `${sym} ${fixed}`;
+}
 
+export function SectionHeading({
+  kicker,
+  title,
+  right,
+}: {
+  kicker?: string;
+  title: string;
+  right?: React.ReactNode;
+}) {
   return (
-    <div className="flex items-center justify-between">
-      <CurrencyBadge currency={currency} />
-      <span className={`text-lg font-semibold tabular-nums ${color}`}>
-        {formatAmount(Math.abs(amount), currency)}
-      </span>
+    <div className="flex items-end justify-between mb-4 gap-6 flex-wrap">
+      <div>
+        {kicker && (
+          <div className="font-smallcaps tracking-[0.24em] text-[16px] text-brass mb-2">
+            {kicker}
+          </div>
+        )}
+        <h2 className="font-display text-4xl font-normal text-ink leading-none">
+          {title}
+        </h2>
+      </div>
+      {right && <div className="text-faded">{right}</div>}
     </div>
   );
 }

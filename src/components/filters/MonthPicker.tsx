@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { useBudget, useBudgetDispatch } from '../../context/BudgetContext';
 import { getAvailableMonths } from '../../lib/transforms';
 
@@ -46,33 +45,35 @@ export function MonthPicker() {
   };
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-3.5">
       <button
         onClick={prev}
-        className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 transition-colors"
+        className="text-faded hover:text-vermillion transition-colors duration-150 text-xl leading-none"
+        aria-label="Previous month"
       >
-        <ChevronLeft className="w-4 h-4" />
+        ‹
       </button>
       <div className="relative">
         <select
           value={currentKey}
           onChange={(e) => setMonth(e.target.value)}
-          className="appearance-none bg-transparent pl-7 pr-3 py-1.5 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+          className="appearance-none bg-transparent pr-6 py-1 text-lg font-serif italic text-ink cursor-pointer border-b border-faded hover:border-vermillion focus:border-vermillion focus:outline-none transition-colors duration-150 min-w-[12ch] text-center"
         >
-          <option value="all">All Time</option>
+          <option value="all">all months</option>
           {[...months].reverse().map((m) => (
             <option key={m.key} value={m.key}>
-              {m.label}
+              {m.label.toLowerCase()}
             </option>
           ))}
         </select>
-        <Calendar className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+        <span className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-faded text-sm">▾</span>
       </div>
       <button
         onClick={next}
-        className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 transition-colors"
+        className="text-faded hover:text-vermillion transition-colors duration-150 text-xl leading-none"
+        aria-label="Next month"
       >
-        <ChevronRight className="w-4 h-4" />
+        ›
       </button>
     </div>
   );

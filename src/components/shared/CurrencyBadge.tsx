@@ -1,15 +1,19 @@
 import type { Currency } from '../../types';
+import { CURRENCY_SYMBOLS } from '../../lib/currency';
 
-const colorMap: Record<Currency, string> = {
-  CHF: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400',
-  EUR: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400',
-  PLN: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+const inkMap: Record<Currency, string> = {
+  CHF: 'text-moss',
+  EUR: 'text-indigoink',
+  PLN: 'text-clay',
 };
 
-export function CurrencyBadge({ currency }: { currency: Currency }) {
+export function CurrencyBadge({ currency, withSymbol = false }: { currency: Currency; withSymbol?: boolean }) {
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${colorMap[currency]}`}>
-      {currency}
+    <span
+      className={`font-smallcaps tracking-[0.22em] text-[15.5px] ${inkMap[currency]}`}
+      title={currency}
+    >
+      {withSymbol ? `${CURRENCY_SYMBOLS[currency]} · ` : ''}{currency.toLowerCase()}
     </span>
   );
 }

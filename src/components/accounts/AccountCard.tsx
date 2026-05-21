@@ -2,14 +2,25 @@ import { useMemo } from 'react';
 import type { Transaction, AccountBalance } from '../../types';
 import { formatAmount } from '../../lib/currency';
 import { CurrencyBadge } from '../shared/CurrencyBadge';
-import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { InkArrow } from '../shared/Ornaments';
 
 interface Props {
   account: AccountBalance;
   transactions: Transaction[];
+  index?: number;
 }
 
-export function AccountCard({ account, transactions }: Props) {
+function toRomanLower(n: number): string {
+  const vals: [number, string][] = [
+    [100, 'c'], [90, 'xc'], [50, 'l'], [40, 'xl'],
+    [10, 'x'], [9, 'ix'], [5, 'v'], [4, 'iv'], [1, 'i'],
+  ];
+  let out = '';
+  for (const [v, s] of vals) { while (n >= v) { out += s; n -= v; } }
+  return out;
+}
+
+export function AccountCard({ account, transactions, index }: Props) {
   const stats = useMemo(() => {
     const acctTxns = transactions.filter((t) => t.account === account.account);
     const income = acctTxns.filter((t) => t.type === 'Income').reduce((s, t) => s + t.amount, 0);
@@ -21,50 +32,67 @@ export function AccountCard({ account, transactions }: Props) {
     return { income, expenses: Math.abs(expenses), transfersIn, transfersOut: Math.abs(transfersOut), net };
   }, [account.account, transactions]);
 
-  const TrendIcon = stats.net > 0 ? TrendingUp : stats.net < 0 ? TrendingDown : Minus;
-  const trendColor = stats.net > 0
-    ? 'text-emerald-500'
-    : stats.net < 0
-    ? 'text-red-500'
-    : 'text-gray-400';
+  const netPositive = stats.net > 0;
+  const netNeutral = stats.net === 0;
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">{account.account}</h3>
+    <article className="py-5 border-b border-rule-soft">
+      <header className="flex items-baseline justify-between mb-2 gap-2">
+        <div className="flex items-baseline gap-2 min-w-0">
+          {index != null && (
+            <span className="font-smallcaps tracking-[0.22em] text-[16px] text-brass shrink-0">
+              no. {toRomanLower(index)}
+            </span>
+          )}
+          <h3 className="font-display text-xl text-ink truncate" title={account.account}>
+            {account.account}
+          </h3>
+        </div>
         <CurrencyBadge currency={account.currency} />
-      </div>
-      <div className="text-2xl font-bold tabular-nums text-gray-900 dark:text-gray-100 mb-3">
+      </header>
+
+      <div className="font-display text-xl font-normal text-ink tabular-nums mb-3">
         {formatAmount(account.currentBalance, account.currency)}
       </div>
-      <div className="space-y-1 text-xs">
-        <div className="flex justify-between text-gray-500 dark:text-gray-400">
-          <span>Income</span>
-          <span className="text-emerald-500 tabular-nums">
-            +{formatAmount(stats.income, account.currency)}
-          </span>
-        </div>
-        <div className="flex justify-between text-gray-500 dark:text-gray-400">
-          <span>Expenses</span>
-          <span className="text-red-500 tabular-nums">
-            -{formatAmount(stats.expenses, account.currency)}
-          </span>
-        </div>
-        {(stats.transfersIn > 0 || stats.transfersOut > 0) && (
-          <div className="flex justify-between text-gray-500 dark:text-gray-400">
-            <span>Transfers</span>
-            <span className="text-violet-500 tabular-nums">
-              +{formatAmount(stats.transfersIn, account.currency)} / -{formatAmount(stats.transfersOut, account.currency)}
-            </span>
-          </div>
+
+      <dl className="text-sm space-y-1 mb-3">
+        <Row label="Income"   value={`+ ${formatAmount(stats.income, account.currency)}`}   tone="moss" />
+        <Row label="Expenses" value={`− ${formatAmount(stats.expenses, account.currency)}`} tone="vermillion" />
+        {stats.transfersIn > 0 && (
+          <Row label="Transfers in"  value={`+ ${formatAmount(stats.transfersIn, account.currency)}`}  tone="indigo" />
         )}
-      </div>
-      <div className={`flex items-center gap-1 mt-3 pt-3 border-t border-gray-100 dark:border-gray-800 ${trendColor}`}>
-        <TrendIcon className="w-3.5 h-3.5" />
-        <span className="text-xs font-medium">
-          Net: {formatAmount(stats.net, account.currency)}
+        {stats.transfersOut > 0 && (
+          <Row label="Transfers out" value={`− ${formatAmount(stats.transfersOut, account.currency)}`} tone="indigo" />
+        )}
+      </dl>
+
+      <div className="flex items-center gap-2 pt-2 border-t border-rule-soft/60">
+        {!netNeutral && (
+          <InkArrow
+            direction={netPositive ? 'up' : 'down'}
+            className={`w-2.5 h-3 ${netPositive ? 'text-moss' : 'text-vermillion'}`}
+          />
+        )}
+        <span className="font-smallcaps tracking-[0.22em] text-[15px] text-quill">net</span>
+        <span className={`text-sm tabular-nums ${netPositive ? 'text-moss' : netNeutral ? 'text-faded' : 'text-vermillion'}`}>
+          {netPositive ? '+ ' : netNeutral ? '' : '− '}{formatAmount(Math.abs(stats.net), account.currency)}
         </span>
       </div>
+    </article>
+  );
+}
+
+const toneClass: Record<string, string> = {
+  moss: 'text-moss',
+  vermillion: 'text-vermillion',
+  indigo: 'text-indigoink',
+};
+
+function Row({ label, value, tone }: { label: string; value: string; tone: string }) {
+  return (
+    <div className="flex items-baseline justify-between gap-2">
+      <span className="font-smallcaps tracking-[0.22em] text-[14px] text-quill">{label}</span>
+      <span className={`tabular-nums ${toneClass[tone]} truncate`}>{value}</span>
     </div>
   );
 }

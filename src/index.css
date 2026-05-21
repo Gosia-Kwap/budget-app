@@ -1,21 +1,67 @@
 @import "tailwindcss";
 
-@custom-variant dark (&:where(.dark, .dark *));
+@theme {
+  --color-paper: #e8e0c8;
+  --color-surface: #ddd3b5;
+  --color-page: #eee5cb;
+  --color-ink: #0c1206;
+  --color-faded: #2f3622;
+  --color-quill: #4a4a2e;
+  --color-rule: #8a8060;
+  --color-rule-soft: #b0a585;
+  --color-moss: #2f4422;
+  --color-moss-deep: #1d2c15;
+  --color-brass: #6f5215;
+  --color-vermillion: #6a1f0e;
+  --color-indigoink: #1c3454;
+  --color-clay: #6e4022;
 
-:root {
-  --color-brand: #6366f1;
-  --color-income: #22c55e;
-  --color-expense: #ef4444;
-  --color-transfer: #8b5cf6;
-  --color-net: #3b82f6;
+  --font-serif: "EB Garamond", Georgia, serif;
+  --font-display: "Cormorant Garamond", Georgia, serif;
+  --font-smallcaps: "Cormorant SC", Georgia, serif;
 }
 
-body {
-  @apply bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+html {
+  font-size: 18px;
+}
+
+@media (min-width: 1440px) {
+  html { font-size: 19px; }
+}
+
+html, body {
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-feature-settings: "onum", "tnum", "kern", "liga";
+  font-variant-numeric: oldstyle-nums tabular-nums;
   margin: 0;
 }
 
-.dark {
-  color-scheme: dark;
+.font-smallcaps {
+  font-weight: 600;
+}
+
+body {
+  background-image:
+    radial-gradient(at 15% 12%, rgba(154, 125, 58, 0.06) 0%, transparent 40%),
+    radial-gradient(at 85% 88%, rgba(74, 93, 58, 0.05) 0%, transparent 45%);
+}
+
+::selection {
+  background-color: rgba(154, 125, 58, 0.35);
+  color: var(--color-ink);
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-rule); border-radius: 0; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-quill); }
+
+.lining-nums {
+  font-variant-numeric: lining-nums tabular-nums;
+}
+.oldstyle-nums {
+  font-variant-numeric: oldstyle-nums tabular-nums;
 }

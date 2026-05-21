@@ -1,4 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="6" fill="#6366f1"/>
-  <text x="16" y="23" text-anchor="middle" fill="white" font-family="system-ui" font-size="18" font-weight="bold">B</text>
+  <!-- bone paper -->
+  <rect width="32" height="32" fill="#e8e0c8"/>
+  <!-- brass frame -->
+  <rect x="1.5" y="1.5" width="29" height="29" fill="none" stroke="#6f5215" stroke-width="1.5"/>
+  <!-- chunky serif L in vermillion -->
+  <g fill="#6a1f0e">
+    <!-- top serif -->
+    <rect x="7" y="5.5" width="11" height="2.5"/>
+    <!-- vertical stem -->
+    <rect x="11" y="5.5" width="3.5" height="18"/>
+    <!-- base arm -->
+    <rect x="11" y="21" width="14" height="3.5"/>
+    <!-- right end serif of arm -->
+    <rect x="22" y="19" width="3" height="7.5"/>
+    <!-- bottom-left base serif on stem -->
+    <rect x="8" y="22" width="6" height="2.5"/>
+  </g>
 </svg>

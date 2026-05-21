@@ -12,8 +12,6 @@ export function OverviewPage() {
   const { data } = useBudget();
   const filtered = useFilteredData();
   const transactions = useCurrencyConvert(filtered);
-  // Monthly comparison always uses all transactions (not date-filtered)
-  // Resolve expense returns here too so cross-month groups are netted
   const resolvedAll = useMemo(
     () => resolveExpenseReturns(data?.transactions ?? []),
     [data]
@@ -22,17 +20,20 @@ export function OverviewPage() {
 
   if (transactions.length === 0) {
     return (
-      <div className="text-center py-20 text-gray-400">
-        No transactions for the selected period.
+      <div className="text-center py-24">
+        <p className="font-display text-3xl text-faded italic">a blank leaf —</p>
+        <p className="font-serif italic text-faded text-sm mt-2">
+          no entries for the selected period
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div>
       <SummaryCards transactions={transactions} />
       <MonthlyComparison transactions={allTransactions} />
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-10">
         <MonthlyTrendChart transactions={allTransactions} />
         <TopCategoriesChart transactions={transactions} />
       </div>

@@ -1,7 +1,18 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Upload, FileSpreadsheet } from 'lucide-react';
 import { useBudgetDispatch } from '../../context/BudgetContext';
 import { parseExcelFile } from '../../lib/parser';
+import { Flourish } from '../shared/Ornaments';
+
+function toRoman(n: number): string {
+  const vals: [number, string][] = [
+    [1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'],
+    [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'],
+    [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I'],
+  ];
+  let out = '';
+  for (const [v, s] of vals) { while (n >= v) { out += s; n -= v; } }
+  return out;
+}
 
 export function FileUpload() {
   const dispatch = useBudgetDispatch();
@@ -9,19 +20,16 @@ export function FileUpload() {
   const [status, setStatus] = useState<string>('');
   const [existingFile, setExistingFile] = useState<ArrayBuffer | null>(null);
 
-  // Check if /data/budget.xlsx exists, but don't auto-load
   useEffect(() => {
     async function checkExisting() {
       try {
-        setStatus('Looking for budget.xlsx...');
+        setStatus('looking for budget.xlsx…');
         const res = await fetch('/data/budget.xlsx');
         if (res.ok) {
           const buffer = await res.arrayBuffer();
           setExistingFile(buffer);
         }
-      } catch {
-        // File not found
-      }
+      } catch { /* file not found */ }
       setStatus('');
     }
     checkExisting();
@@ -31,11 +39,11 @@ export function FileUpload() {
     if (!existingFile) return;
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
-      setStatus('Parsing budget.xlsx...');
+      setStatus('parsing budget.xlsx…');
       const data = await parseExcelFile(existingFile);
       dispatch({ type: 'SET_DATA', payload: data });
     } catch (e) {
-      dispatch({ type: 'SET_ERROR', payload: `Failed to parse file: ${e}` });
+      dispatch({ type: 'SET_ERROR', payload: `failed to parse file: ${e}` });
     }
   }, [existingFile, dispatch]);
 
@@ -46,7 +54,7 @@ export function FileUpload() {
         const data = await parseExcelFile(file);
         dispatch({ type: 'SET_DATA', payload: data });
       } catch (e) {
-        dispatch({ type: 'SET_ERROR', payload: `Failed to parse file: ${e}` });
+        dispatch({ type: 'SET_ERROR', payload: `failed to parse file: ${e}` });
       }
     },
     [dispatch]
@@ -70,47 +78,90 @@ export function FileUpload() {
     [handleFile]
   );
 
+  const today = new Date();
+
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-950">
-      <div
-        className={`w-full max-w-lg p-12 rounded-2xl border-2 border-dashed transition-colors text-center ${
-          dragging
-            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30'
-            : 'border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900'
-        }`}
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDragging(true);
-        }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={onDrop}
-      >
-        <div className="flex justify-center mb-4">
-          <div className="p-4 rounded-full bg-indigo-100 dark:bg-indigo-900/30">
-            <FileSpreadsheet className="w-10 h-10 text-indigo-600 dark:text-indigo-400" />
+    <div className="min-h-screen flex items-center justify-center p-8">
+      <div className="w-full max-w-xl">
+
+        {/* Title page */}
+        <div className="text-center">
+          <div className="font-smallcaps tracking-[0.28em] text-[15px] text-brass mb-6">
+            volume {toRoman(today.getFullYear() - 2023)}  ·  privately kept
+          </div>
+
+          <h1 className="font-display text-6xl font-normal tracking-wide text-ink leading-none">
+            The Ledger
+          </h1>
+
+          <p className="font-serif italic text-faded text-xl mt-4">
+            a private account of monies kept &amp; spent
+          </p>
+
+          <Flourish className="mx-auto mt-6 text-brass w-44 h-5" />
+
+          <div className="mt-3 mb-12 font-smallcaps tracking-[0.24em] text-[14px] text-quill">
+            opened on {today.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' }).toLowerCase()} · {toRoman(today.getFullYear())}
           </div>
         </div>
-        <h2 className="text-xl font-semibold mb-2 text-gray-900 dark:text-gray-100">
-          Budget Dashboard
-        </h2>
-        {status ? (
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{status}</p>
-        ) : existingFile ? (
-          <>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-              Found <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">budget.xlsx</code> — load it or upload a different file.
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-              <button
-                onClick={loadExisting}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-indigo-600 text-white font-medium text-sm cursor-pointer hover:bg-indigo-700 transition-colors"
-              >
-                <FileSpreadsheet className="w-4 h-4" />
-                Load budget.xlsx
-              </button>
-              <label className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                <Upload className="w-4 h-4" />
-                Upload different file
+
+        {/* Drop area */}
+        <div
+          className={`relative py-12 px-6 border-t border-b transition-colors duration-150 ${
+            dragging ? 'border-vermillion bg-surface/60' : 'border-rule'
+          }`}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragging(true);
+          }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={onDrop}
+        >
+          <div className="absolute inset-x-0 top-[3px] border-t border-rule-soft" />
+          <div className="absolute inset-x-0 bottom-[3px] border-t border-rule-soft" />
+
+          {status ? (
+            <p className="text-center font-serif italic text-faded text-lg">{status}</p>
+          ) : existingFile ? (
+            <div className="text-center">
+              <p className="font-serif italic text-faded text-lg">
+                a volume was found —{' '}
+                <span className="not-italic font-smallcaps tracking-[0.18em] text-[15px] text-ink">budget.xlsx</span>
+              </p>
+              <p className="font-serif italic text-quill text-base mt-1.5">
+                open it, or supply another in its place
+              </p>
+
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-6 mt-8">
+                <button
+                  onClick={loadExisting}
+                  className="font-smallcaps tracking-[0.24em] text-[16.5px] text-vermillion border-b border-vermillion pb-1 hover:text-brass hover:border-brass transition-colors duration-150"
+                >
+                  open this volume
+                </button>
+                <span className="text-rule">·</span>
+                <label className="font-smallcaps tracking-[0.24em] text-[16.5px] text-faded border-b border-rule pb-1 hover:text-ink hover:border-ink transition-colors duration-150 cursor-pointer">
+                  supply another
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls"
+                    className="hidden"
+                    onChange={onFileInput}
+                  />
+                </label>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center">
+              <p className="font-serif italic text-faded text-lg">
+                lay a workbook upon the page
+              </p>
+              <p className="font-serif italic text-quill text-base mt-1.5">
+                drop a budget.xlsx here, or
+              </p>
+
+              <label className="inline-block mt-6 font-smallcaps tracking-[0.24em] text-[16.5px] text-vermillion border-b border-vermillion pb-1 hover:text-brass hover:border-brass transition-colors duration-150 cursor-pointer">
+                choose a file
                 <input
                   type="file"
                   accept=".xlsx,.xls"
@@ -119,24 +170,12 @@ export function FileUpload() {
                 />
               </label>
             </div>
-          </>
-        ) : (
-          <>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-              Drop your budget.xlsx here or click to upload.
-            </p>
-            <label className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-indigo-600 text-white font-medium text-sm cursor-pointer hover:bg-indigo-700 transition-colors">
-              <Upload className="w-4 h-4" />
-              Choose File
-              <input
-                type="file"
-                accept=".xlsx,.xls"
-                className="hidden"
-                onChange={onFileInput}
-              />
-            </label>
-          </>
-        )}
+          )}
+        </div>
+
+        <div className="mt-12 text-center font-smallcaps tracking-[0.24em] text-[14px] text-quill">
+          kept by hand · marked &amp; sealed
+        </div>
       </div>
     </div>
   );

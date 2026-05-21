@@ -19,7 +19,6 @@ export function CategoriesPage() {
 
   const categories = useMemo(() => groupByCategory(transactions), [transactions]);
 
-  // For "All" mode: group by category per currency
   const perCurrency = useMemo(() => {
     if (filters.currencyMode !== 'all') return null;
     const result = new Map<Currency, { transactions: Transaction[]; categories: CategoryTotal[] }>();
@@ -35,17 +34,13 @@ export function CategoriesPage() {
 
   if (filters.currencyMode === 'all' && perCurrency) {
     if (perCurrency.size === 0) {
-      return (
-        <div className="text-center py-20 text-gray-400">
-          No expenses for the selected period.
-        </div>
-      );
+      return <EmptyLeaf message="no expenses for the selected period" />;
     }
 
     return (
-      <div className="space-y-6">
+      <div>
         <CurrencyComparisonTable perCurrency={perCurrency} />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-x-10 gap-y-10 mt-12">
           {CURRENCIES.filter((c) => perCurrency.has(c)).map((c) => (
             <CategoryPieChart
               key={c}
@@ -62,30 +57,33 @@ export function CategoriesPage() {
   }
 
   if (transactions.length === 0) {
-    return (
-      <div className="text-center py-20 text-gray-400">
-        No expenses in {filters.filterCurrency} for the selected period.
-      </div>
-    );
+    return <EmptyLeaf message={`no expenses in ${filters.filterCurrency} for the selected period`} />;
   }
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <CategoryPieChart
-          categories={categories}
-          selected={selectedCategory}
-          onSelect={setSelectedCategory}
-        />
-        <CategoryTable
-          categories={categories}
-          transactions={transactions}
-          expanded={selectedCategory}
-          onToggle={(cat) =>
-            setSelectedCategory(selectedCategory === cat ? null : cat)
-          }
-        />
-      </div>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-10">
+      <CategoryPieChart
+        categories={categories}
+        selected={selectedCategory}
+        onSelect={setSelectedCategory}
+      />
+      <CategoryTable
+        categories={categories}
+        transactions={transactions}
+        expanded={selectedCategory}
+        onToggle={(cat) =>
+          setSelectedCategory(selectedCategory === cat ? null : cat)
+        }
+      />
+    </div>
+  );
+}
+
+function EmptyLeaf({ message }: { message: string }) {
+  return (
+    <div className="text-center py-24">
+      <p className="font-display text-3xl text-faded italic">a blank leaf —</p>
+      <p className="font-serif italic text-faded text-sm mt-2">{message}</p>
     </div>
   );
 }

@@ -7,20 +7,23 @@ export function CurrencyToggle() {
   const { filters } = useBudget();
   const dispatch = useBudgetDispatch();
 
+  const isAll = filters.currencyMode === 'all';
+
   return (
-    <div className="flex items-center gap-2">
-      <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <button
-          onClick={() => dispatch({ type: 'SET_FILTERS', payload: { currencyMode: 'all' } })}
-          className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-            filters.currencyMode === 'all'
-              ? 'bg-indigo-600 text-white'
-              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
-          }`}
-        >
-          All
-        </button>
-        {currencies.map((c) => (
+    <div className="flex items-center gap-3.5 font-smallcaps tracking-[0.2em] text-[16px]">
+      <button
+        onClick={() => dispatch({ type: 'SET_FILTERS', payload: { currencyMode: 'all' } })}
+        className={`pb-[2px] border-b transition-colors duration-150 ${
+          isAll
+            ? 'text-vermillion border-vermillion'
+            : 'text-faded border-transparent hover:text-ink hover:border-rule'
+        }`}
+      >
+        all
+      </button>
+      {currencies.map((c) => {
+        const active = !isAll && filters.filterCurrency === c;
+        return (
           <button
             key={c}
             onClick={() =>
@@ -29,16 +32,16 @@ export function CurrencyToggle() {
                 payload: { currencyMode: 'filtered', filterCurrency: c },
               })
             }
-            className={`px-3 py-1.5 text-xs font-medium transition-colors border-l border-gray-200 dark:border-gray-700 ${
-              filters.currencyMode === 'filtered' && filters.filterCurrency === c
-                ? 'bg-indigo-600 text-white'
-                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+            className={`pb-[2px] border-b transition-colors duration-150 ${
+              active
+                ? 'text-vermillion border-vermillion'
+                : 'text-faded border-transparent hover:text-ink hover:border-rule'
             }`}
           >
-            {c}
+            {c.toLowerCase()}
           </button>
-        ))}
-      </div>
+        );
+      })}
     </div>
   );
 }

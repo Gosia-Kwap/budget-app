@@ -1,9 +1,9 @@
-import { ChevronDown, ChevronRight } from 'lucide-react';
 import type { Transaction } from '../../types';
 import type { CategoryTotal } from '../../lib/transforms';
 import { formatAmount, CURRENCY_SYMBOLS } from '../../lib/currency';
 import { CurrencyBadge } from '../shared/CurrencyBadge';
 import { useBudget } from '../../context/BudgetContext';
+import { SectionHeading } from '../overview/SummaryCards';
 
 interface Props {
   categories: CategoryTotal[];
@@ -18,77 +18,93 @@ export function CategoryTable({ categories, transactions, expanded, onToggle }: 
   const currencyLabel =
     filters.currencyMode === 'filtered'
       ? `${CURRENCY_SYMBOLS[filters.filterCurrency]} `
-      : ''; // In 'all' mode, CategoryTable is not rendered (CurrencyComparisonTable is used instead)
+      : '';
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5">
-      <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">
-        Category Breakdown
-      </h3>
-      <div className="space-y-1">
+    <section>
+      <SectionHeading kicker="Index" title="Category breakdown" />
+      <div className="border-t border-rule" />
+      <div className="border-t border-rule-soft mt-[2px]" />
+
+      <div>
         {categories.map((cat) => {
           const pct = total > 0 ? (cat.total / total) * 100 : 0;
           const isOpen = expanded === cat.category;
 
           return (
-            <div key={cat.category}>
+            <div key={cat.category} className="border-b border-rule-soft">
               <button
                 onClick={() => onToggle(cat.category)}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-left"
+                className="w-full flex items-baseline gap-3 py-3.5 hover:bg-surface/40 transition-colors duration-150 text-left px-1"
               >
-                {isOpen ? (
-                  <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />
-                ) : (
-                  <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
-                )}
-                <span className="flex-1 text-sm font-medium text-gray-800 dark:text-gray-200">
-                  {cat.category}
+                <span className="text-faded text-sm w-3 inline-block">
+                  {isOpen ? '▾' : '▸'}
                 </span>
-                <span className="text-xs text-gray-400 mr-2">{pct.toFixed(1)}%</span>
-                <span className="text-sm font-semibold tabular-nums text-gray-700 dark:text-gray-300">
+                <span className="flex-1 italic text-ink text-lg">{cat.category}</span>
+                <span className="font-smallcaps tracking-[0.2em] text-[17px] text-quill">
+                  {pct.toFixed(1)}%
+                </span>
+                <span className="font-display text-lg text-vermillion tabular-nums w-32 text-right">
                   {currencyLabel}{cat.total.toFixed(2)}
                 </span>
               </button>
               {isOpen && (
-                <div className="ml-9 mb-2 space-y-1">
-                  {Array.from(cat.subcategories.entries())
-                    .sort((a, b) => b[1] - a[1])
-                    .map(([sub, amount]) => (
-                      <div
-                        key={sub}
-                        className="flex items-center justify-between px-3 py-1.5 text-sm rounded-lg bg-gray-50 dark:bg-gray-800/30"
-                      >
-                        <span className="text-gray-600 dark:text-gray-400">{sub}</span>
-                        <span className="tabular-nums text-gray-600 dark:text-gray-400">
-                          {currencyLabel}{amount.toFixed(2)}
-                        </span>
-                      </div>
-                    ))}
-                  {/* Show individual transactions */}
-                  <div className="mt-2 border-t border-gray-100 dark:border-gray-800 pt-2">
-                    <p className="text-xs text-gray-400 mb-1 px-3">Recent transactions</p>
-                    {transactions
-                      .filter((t) => (t.type === 'Expense' || t.type === 'ExpenseReturn') && t.category === cat.category)
-                      .sort((a, b) => b.date.getTime() - a.date.getTime())
-                      .slice(0, 10)
-                      .map((t, i) => (
-                        <div
-                          key={i}
-                          className="flex items-center gap-2 px-3 py-1 text-xs text-gray-500 dark:text-gray-500"
-                        >
-                          <span className="w-20 shrink-0">
-                            {t.date.toLocaleDateString('de-CH')}
-                          </span>
-                          <span className="flex-1 truncate">{t.subcategory}</span>
-                          {t.description && (
-                            <span className="flex-1 truncate text-gray-400">{t.description}</span>
-                          )}
-                          <CurrencyBadge currency={t.currency} />
-                          <span className="tabular-nums font-medium text-red-500">
-                            {formatAmount(Math.abs(t.amount), t.currency)}
-                          </span>
-                        </div>
-                      ))}
+                <div className="pl-7 pr-1 pb-4 pt-1 space-y-2">
+                  {/* Subcategory rollups */}
+                  <div className="space-y-1">
+                    {Array.from(cat.subcategories.entries())
+                      .sort((a, b) => b[1] - a[1])
+                      .map(([sub, amount]) => {
+                        const subPct = cat.total > 0 ? (amount / cat.total) * 100 : 0;
+                        return (
+                          <div
+                            key={sub}
+                            className="flex items-baseline gap-3 py-1 text-sm"
+                          >
+                            <span className="flex-1 italic text-faded">{sub}</span>
+                            <span className="relative w-24 h-1 bg-rule-soft">
+                              <span
+                                className="absolute inset-y-0 left-0 bg-clay/70"
+                                style={{ width: `${subPct}%` }}
+                              />
+                            </span>
+                            <span className="tabular-nums text-faded w-24 text-right">
+                              {currencyLabel}{amount.toFixed(2)}
+                            </span>
+                          </div>
+                        );
+                      })}
+                  </div>
+
+                  {/* Recent transactions */}
+                  <div className="mt-4 pt-3 border-t border-rule-soft/70">
+                    <p className="font-smallcaps tracking-[0.24em] text-[14px] text-brass mb-2.5">
+                      Recent entries
+                    </p>
+                    <div className="space-y-1">
+                      {transactions
+                        .filter((t) => (t.type === 'Expense' || t.type === 'ExpenseReturn') && t.category === cat.category)
+                        .sort((a, b) => b.date.getTime() - a.date.getTime())
+                        .slice(0, 10)
+                        .map((t, i) => (
+                          <div
+                            key={i}
+                            className="flex items-baseline gap-3 text-base text-quill"
+                          >
+                            <span className="w-20 shrink-0 font-smallcaps tracking-[0.18em] text-[14px]">
+                              {t.date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).toLowerCase()}
+                            </span>
+                            <span className="flex-1 truncate italic">{t.subcategory}</span>
+                            {t.description && (
+                              <span className="flex-1 truncate text-rule">{t.description}</span>
+                            )}
+                            <CurrencyBadge currency={t.currency} />
+                            <span className="tabular-nums text-vermillion w-24 text-right">
+                              {formatAmount(Math.abs(t.amount), t.currency)}
+                            </span>
+                          </div>
+                        ))}
+                    </div>
                   </div>
                 </div>
               )}
@@ -96,6 +112,6 @@ export function CategoryTable({ categories, transactions, expanded, onToggle }: 
           );
         })}
       </div>
-    </div>
+    </section>
   );
 }

@@ -13,10 +13,11 @@ import type { AccountBalance, Transaction, Currency } from '../../types';
 import { calculateRunningBalances } from '../../lib/transforms';
 import { useBudget } from '../../context/BudgetContext';
 import { CURRENCY_SYMBOLS } from '../../lib/currency';
+import { SectionHeading } from '../overview/SummaryCards';
 
 const LINE_COLORS = [
-  '#6366f1', '#22c55e', '#ef4444', '#f97316',
-  '#8b5cf6', '#06b6d4', '#ec4899',
+  '#7a3520', '#4a5d3a', '#2c4a6b', '#9a7d3a',
+  '#8b5a3c', '#4a4a2e', '#2f3622',
 ];
 
 interface Props {
@@ -24,27 +25,23 @@ interface Props {
   transactions: Transaction[];
 }
 
-/** Build a unified daily timeline for a set of accounts sharing one currency. */
 function buildTimeline(accounts: AccountBalance[], transactions: Transaction[]) {
   const balancesByAccount = accounts.map((acc) => ({
     account: acc.account,
     points: calculateRunningBalances(acc.account, acc.startingBalance, transactions),
   }));
 
-  // Collect all dates across accounts, keyed by YYYY-MM-DD
   const allDates = new Map<string, Record<string, number>>();
 
   for (const { account, points } of balancesByAccount) {
     for (const p of points) {
       const key = p.date.toISOString().split('T')[0];
       const row = allDates.get(key) ?? {};
-      // Keep only the last balance per day (cumulative)
       row[account] = p.balance;
       allDates.set(key, row);
     }
   }
 
-  // Sort chronologically and forward-fill gaps
   const sorted = Array.from(allDates.entries()).sort((a, b) =>
     a[0].localeCompare(b[0]),
   );
@@ -62,7 +59,7 @@ function buildTimeline(accounts: AccountBalance[], transactions: Transaction[]) 
     const d = new Date(date);
     return {
       date,
-      label: d.toLocaleDateString('de-CH', { day: '2-digit', month: 'short' }),
+      label: d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }),
       ...values,
     };
   });
@@ -72,12 +69,10 @@ function CurrencyChart({
   currency,
   accounts,
   transactions,
-  darkMode,
 }: {
   currency: Currency;
   accounts: AccountBalance[];
   transactions: Transaction[];
-  darkMode: boolean;
 }) {
   const data = useMemo(
     () => buildTimeline(accounts, transactions),
@@ -86,27 +81,28 @@ function CurrencyChart({
 
   if (data.length === 0) return null;
 
-  const textColor = darkMode ? '#9ca3af' : '#6b7280';
-  const gridColor = darkMode ? '#374151' : '#e5e7eb';
-
   return (
     <div>
-      <h4 className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-3">
-        {CURRENCY_SYMBOLS[currency]} Accounts
+      <h4 className="font-smallcaps tracking-[0.24em] text-[18px] text-brass mb-3">
+        in {currency.toLowerCase()}  ·  {CURRENCY_SYMBOLS[currency]}
       </h4>
-      <div className="h-64">
+      <div className="h-72">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+          <LineChart data={data} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
+            <CartesianGrid stroke="#b0a585" strokeDasharray="1 4" />
             <XAxis
               dataKey="label"
-              tick={{ fontSize: 11, fill: textColor }}
+              tick={{ fontSize: 13, fill: '#4a4a2e', fontFamily: 'EB Garamond, Georgia, serif', fontStyle: 'italic' }}
+              axisLine={{ stroke: '#8a8060' }}
+              tickLine={false}
               interval="preserveStartEnd"
               minTickGap={40}
             />
             <YAxis
-              tick={{ fontSize: 11, fill: textColor }}
-              width={70}
+              tick={{ fontSize: 13, fill: '#4a4a2e', fontFamily: 'EB Garamond, Georgia, serif' }}
+              axisLine={false}
+              tickLine={false}
+              width={60}
               tickFormatter={(v: number) =>
                 v >= 1000 || v <= -1000
                   ? `${(v / 1000).toFixed(1)}k`
@@ -115,27 +111,39 @@ function CurrencyChart({
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: darkMode ? '#1f2937' : '#fff',
-                border: `1px solid ${gridColor}`,
-                borderRadius: 8,
+                backgroundColor: '#eee5cb',
+                border: '1px solid #8a8060',
+                borderRadius: 0,
                 fontSize: 12,
+                fontFamily: 'EB Garamond, Georgia, serif',
+                color: '#0c1206',
+                padding: '6px 10px',
               }}
-              labelStyle={{ color: darkMode ? '#e5e7eb' : '#111827' }}
+              labelStyle={{ color: '#2f3622', fontStyle: 'italic', marginBottom: 2 }}
               formatter={(value: number, name: string) => [
                 `${CURRENCY_SYMBOLS[currency]} ${value.toFixed(2)}`,
                 name,
               ]}
             />
-            <Legend wrapperStyle={{ fontSize: 12, color: textColor }} />
+            <Legend
+              wrapperStyle={{
+                fontSize: 12,
+                fontFamily: 'EB Garamond, Georgia, serif',
+                fontStyle: 'italic',
+                color: '#2f3622',
+              }}
+              iconType="plainline"
+            />
             {accounts.map((acc, i) => (
               <Line
                 key={acc.account}
                 type="monotone"
                 dataKey={acc.account}
                 stroke={LINE_COLORS[i % LINE_COLORS.length]}
-                strokeWidth={2}
+                strokeWidth={1.5}
                 dot={false}
                 connectNulls
+                animationDuration={350}
               />
             ))}
           </LineChart>
@@ -146,9 +154,8 @@ function CurrencyChart({
 }
 
 export function BalanceTimeline({ accounts, transactions }: Props) {
-  const { darkMode, filters } = useBudget();
+  const { filters } = useBudget();
 
-  // Group accounts by currency
   const byCurrency = useMemo(() => {
     const map = new Map<Currency, AccountBalance[]>();
     for (const acc of accounts) {
@@ -159,7 +166,6 @@ export function BalanceTimeline({ accounts, transactions }: Props) {
     return map;
   }, [accounts]);
 
-  // If filtering by currency, only show that currency's chart
   const currencies = useMemo(() => {
     if (filters.currencyMode === 'filtered') {
       return byCurrency.has(filters.filterCurrency)
@@ -172,21 +178,19 @@ export function BalanceTimeline({ accounts, transactions }: Props) {
   if (currencies.length === 0) return null;
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5">
-      <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-5">
-        Balance Over Time
-      </h3>
-      <div className="space-y-8">
+    <section className="mt-12">
+      <SectionHeading kicker="A chronicle" title="Balance through time" />
+      <div className="border-t border-rule" />
+      <div className="space-y-10 pt-6">
         {currencies.map((cur) => (
           <CurrencyChart
             key={cur}
             currency={cur}
             accounts={byCurrency.get(cur) ?? []}
             transactions={transactions}
-            darkMode={darkMode}
           />
         ))}
       </div>
-    </div>
+    </section>
   );
 }

@@ -3,11 +3,13 @@ import type { CategoryTotal } from '../../lib/transforms';
 import { useBudget } from '../../context/BudgetContext';
 import { CURRENCY_SYMBOLS } from '../../lib/currency';
 import type { Currency } from '../../types';
+import { SectionHeading } from '../overview/SummaryCards';
 
+// Ledger ramp — earth tones with brass and indigo accents
 const COLORS = [
-  '#6366f1', '#8b5cf6', '#a855f7', '#d946ef',
-  '#ec4899', '#f43f5e', '#ef4444', '#f97316',
-  '#eab308', '#22c55e', '#14b8a6', '#06b6d4',
+  '#7a3520', '#8b5a3c', '#9a7d3a', '#4a5d3a',
+  '#2c4a6b', '#4a4a2e', '#2f3622', '#2e3a25',
+  '#a89878', '#8a8060', '#5a4a3a', '#0c1206',
 ];
 
 interface Props {
@@ -19,7 +21,7 @@ interface Props {
 }
 
 export function CategoryPieChart({ categories, selected, onSelect, currencyOverride, compact }: Props) {
-  const { darkMode, filters } = useBudget();
+  const { filters } = useBudget();
   const currency = currencyOverride ?? (filters.currencyMode === 'filtered' ? filters.filterCurrency : undefined);
   const currencyLabel = currency ? `${CURRENCY_SYMBOLS[currency]} ` : '';
 
@@ -28,24 +30,25 @@ export function CategoryPieChart({ categories, selected, onSelect, currencyOverr
     value: Math.round(c.total * 100) / 100,
   }));
 
-  const gridColor = darkMode ? '#374151' : '#e5e7eb';
+  const title = currencyOverride ? `In ${currencyOverride.toLowerCase()}` : 'Spending by category';
+  const kicker = currencyOverride ? `Plate ${plateNum(currencyOverride)}` : 'Plate III';
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5">
-      <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">
-        {currencyOverride ? `${currencyOverride} Spending` : 'Spending by Category'}
-      </h3>
-      <div className={compact ? 'h-48' : 'h-72'}>
+    <section>
+      <SectionHeading kicker={kicker} title={title} />
+      <div className="border-t border-rule" />
+      <div className={`${compact ? 'h-64' : 'h-80'} pt-6`}>
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
               data={data}
               cx="50%"
               cy="50%"
-              innerRadius={compact ? 35 : 60}
-              outerRadius={compact ? 65 : 100}
-              paddingAngle={2}
+              innerRadius={compact ? 42 : 72}
+              outerRadius={compact ? 76 : 120}
+              paddingAngle={1}
               dataKey="value"
+              animationDuration={300}
               onClick={(_, idx) => {
                 const name = data[idx]?.name;
                 onSelect(selected === name ? null : name);
@@ -56,41 +59,49 @@ export function CategoryPieChart({ categories, selected, onSelect, currencyOverr
                 <Cell
                   key={entry.name}
                   fill={COLORS[i % COLORS.length]}
-                  opacity={selected && selected !== entry.name ? 0.3 : 1}
-                  stroke={selected === entry.name ? '#fff' : 'none'}
-                  strokeWidth={selected === entry.name ? 2 : 0}
+                  opacity={selected && selected !== entry.name ? 0.25 : 1}
+                  stroke="#e8e2d0"
+                  strokeWidth={selected === entry.name ? 2 : 1}
                 />
               ))}
             </Pie>
             <Tooltip
               contentStyle={{
-                backgroundColor: darkMode ? '#1f2937' : '#fff',
-                border: `1px solid ${gridColor}`,
-                borderRadius: 8,
-                fontSize: 13,
+                backgroundColor: '#eee5cb',
+                border: '1px solid #8a8060',
+                borderRadius: 0,
+                fontSize: 12,
+                fontFamily: 'EB Garamond, Georgia, serif',
+                color: '#0c1206',
+                padding: '6px 10px',
               }}
+              labelStyle={{ color: '#2f3622', fontStyle: 'italic' }}
               formatter={(value) => `${currencyLabel}${Number(value).toFixed(2)}`}
             />
           </PieChart>
         </ResponsiveContainer>
       </div>
-      <div className="flex flex-wrap gap-3 mt-2 justify-center">
+      <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-4 justify-center">
         {data.map((d, i) => (
           <button
             key={d.name}
             onClick={() => onSelect(selected === d.name ? null : d.name)}
-            className={`flex items-center gap-1.5 text-xs transition-opacity ${
-              selected && selected !== d.name ? 'opacity-40' : ''
+            className={`flex items-center gap-2 text-base italic transition-opacity duration-150 ${
+              selected && selected !== d.name ? 'opacity-30' : ''
             }`}
           >
             <span
-              className="w-2.5 h-2.5 rounded-full"
+              className="w-2.5 h-2.5 inline-block"
               style={{ backgroundColor: COLORS[i % COLORS.length] }}
             />
-            <span className="text-gray-600 dark:text-gray-400">{d.name}</span>
+            <span className="text-faded">{d.name}</span>
           </button>
         ))}
       </div>
-    </div>
+    </section>
   );
+}
+
+function plateNum(c: Currency): string {
+  return c === 'CHF' ? 'IV' : c === 'EUR' ? 'V' : 'VI';
 }
