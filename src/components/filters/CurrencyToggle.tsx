@@ -1,11 +1,17 @@
+import { useMemo } from 'react';
 import { useBudget, useBudgetDispatch } from '../../context/BudgetContext';
-import type { Currency } from '../../types';
-
-const currencies: Currency[] = ['CHF', 'EUR', 'PLN'];
+import { listCurrencies } from '../../lib/currency';
 
 export function CurrencyToggle() {
-  const { filters } = useBudget();
+  const { filters, data } = useBudget();
   const dispatch = useBudgetDispatch();
+
+  // Whatever currencies the workbook actually contains, in the order they
+  // first appear in it.
+  const currencies = useMemo(() => listCurrencies(data), [data]);
+
+  // Nothing to toggle between when everything is in one currency.
+  if (currencies.length < 2) return null;
 
   const isAll = filters.currencyMode === 'all';
 

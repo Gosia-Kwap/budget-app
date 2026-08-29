@@ -1,4 +1,6 @@
 import type { Transaction, Currency } from '../types';
+import { config } from '../config';
+import { formatMonthLabel } from './format';
 
 export function filterByDateRange(
   transactions: Transaction[],
@@ -152,8 +154,8 @@ export function groupByCategory(transactions: Transaction[]): CategoryTotal[] {
   for (const t of expenseRelated) {
     const effective = Math.abs(getEffectiveAmount(t, groupNets, groupSizes));
     const amount = t.type === 'ExpenseReturn' ? -effective : effective;
-    const cat = t.category || 'Uncategorized';
-    const sub = t.subcategory || 'Other';
+    const cat = t.category || config.fallbackLabels.category;
+    const sub = t.subcategory || config.fallbackLabels.subcategory;
 
     if (!cats.has(cat)) cats.set(cat, { total: 0, subs: new Map() });
     const entry = cats.get(cat)!;
@@ -186,7 +188,7 @@ export function groupByMonth(transactions: Transaction[]): MonthlyData[] {
     const effective = getEffectiveAmount(t, groupNets, groupSizes);
 
     if (!months.has(key)) {
-      const label = t.date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+      const label = formatMonthLabel(t.date);
       months.set(key, { month: key, label, income: 0, expenses: 0, net: 0 });
     }
     const m = months.get(key)!;
@@ -229,7 +231,7 @@ export function getAvailableMonths(transactions: Transaction[]): { key: string; 
       set.add(key);
       result.push({
         key,
-        label: t.date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+        label: formatMonthLabel(t.date),
       });
     }
   }

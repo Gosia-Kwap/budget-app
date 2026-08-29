@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import {
-  BarChart,
   Bar,
   Line,
   XAxis,
@@ -13,8 +12,9 @@ import {
 } from 'recharts';
 import type { AccountBalance, Transaction, Currency } from '../../../types';
 import { useBudget } from '../../../context/BudgetContext';
-import { CURRENCY_SYMBOLS, formatAmount } from '../../../lib/currency';
+import { currencySymbol, formatAmount } from '../../../lib/currency';
 import { TrendingUp, Wallet, PiggyBank, Percent } from 'lucide-react';
+import { formatMonthLabel } from '../../../lib/format';
 
 interface Props {
   accounts: AccountBalance[];
@@ -27,10 +27,6 @@ interface MonthSavingsData {
   deposits: number;
   withdrawals: number;
   net: number;
-}
-
-function isSavingsAccount(name: string): boolean {
-  return name.toLowerCase().includes('save');
 }
 
 function buildMonthlySavings(
@@ -46,7 +42,7 @@ function buildMonthlySavings(
   for (const t of transfers) {
     const key = `${t.date.getFullYear()}-${String(t.date.getMonth() + 1).padStart(2, '0')}`;
     if (!months.has(key)) {
-      const label = t.date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+      const label = formatMonthLabel(t.date);
       months.set(key, { month: key, label, deposits: 0, withdrawals: 0, net: 0 });
     }
     const m = months.get(key)!;
@@ -104,7 +100,7 @@ function CurrencySavingsChart({
   return (
     <div>
       <h4 className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-4">
-        {CURRENCY_SYMBOLS[currency]} Savings
+        {currencySymbol(currency)} Savings
       </h4>
 
       {/* Summary stats */}
@@ -160,8 +156,8 @@ function CurrencySavingsChart({
                 borderRadius: 8,
                 fontSize: 12,
               }}
-              formatter={(value: number, name: string) => [
-                `${CURRENCY_SYMBOLS[currency]} ${Math.abs(value).toFixed(2)}`,
+              formatter={(value, name) => [
+                `${currencySymbol(currency)} ${Math.abs(Number(value)).toFixed(2)}`,
                 name,
               ]}
             />
@@ -221,7 +217,7 @@ export function SavingsOverview({ accounts, transactions }: Props) {
   const { darkMode, filters } = useBudget();
 
   const savingsAccounts = useMemo(
-    () => accounts.filter((a) => isSavingsAccount(a.account)),
+    () => accounts.filter((a) => a.isSavings),
     [accounts]
   );
 

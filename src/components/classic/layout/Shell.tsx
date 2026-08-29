@@ -6,6 +6,7 @@ import { OverviewPage } from '../overview/OverviewPage';
 import { CategoriesPage } from '../categories/CategoriesPage';
 import { AccountsPage } from '../accounts/AccountsPage';
 import { useBudget, useBudgetDispatch } from '../../../context/BudgetContext';
+import { config } from '../../../config';
 import { RefreshCw } from 'lucide-react';
 
 const pages = {
@@ -25,7 +26,7 @@ export function Shell() {
         <div className="px-6 lg:px-10">
           <div className="flex items-center justify-between h-14">
             <div className="flex items-center gap-4">
-              <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">Budget</h1>
+              <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">{config.appName}</h1>
               <NavTabs />
             </div>
             <div className="flex items-center gap-3">

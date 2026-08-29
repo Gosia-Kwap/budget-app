@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Upload, FileSpreadsheet } from 'lucide-react';
 import { useBudgetDispatch } from '../../../context/BudgetContext';
-import { parseExcelFile } from '../../../lib/parser';
+import { config } from '../../../config';
+import { parseExcelFile, WorkbookError } from '../../../lib/parser';
+
+const dataFileName = config.dataFile.split('/').pop() ?? config.dataFile;
 
 export function FileUpload() {
   const dispatch = useBudgetDispatch();
@@ -9,12 +12,12 @@ export function FileUpload() {
   const [status, setStatus] = useState<string>('');
   const [existingFile, setExistingFile] = useState<ArrayBuffer | null>(null);
 
-  // Check if /data/budget.xlsx exists, but don't auto-load
+  // Check if the configured data file exists, but don't auto-load
   useEffect(() => {
     async function checkExisting() {
       try {
-        setStatus('Looking for budget.xlsx...');
-        const res = await fetch('/data/budget.xlsx');
+        setStatus(`Looking for ${dataFileName}...`);
+        const res = await fetch(config.dataFile);
         if (res.ok) {
           const buffer = await res.arrayBuffer();
           setExistingFile(buffer);
@@ -31,11 +34,11 @@ export function FileUpload() {
     if (!existingFile) return;
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
-      setStatus('Parsing budget.xlsx...');
+      setStatus(`Parsing ${dataFileName}...`);
       const data = await parseExcelFile(existingFile);
       dispatch({ type: 'SET_DATA', payload: data });
     } catch (e) {
-      dispatch({ type: 'SET_ERROR', payload: `Failed to parse file: ${e}` });
+      dispatch({ type: 'SET_ERROR', payload: describeError(e) });
     }
   }, [existingFile, dispatch]);
 
@@ -46,7 +49,7 @@ export function FileUpload() {
         const data = await parseExcelFile(file);
         dispatch({ type: 'SET_DATA', payload: data });
       } catch (e) {
-        dispatch({ type: 'SET_ERROR', payload: `Failed to parse file: ${e}` });
+        dispatch({ type: 'SET_ERROR', payload: describeError(e) });
       }
     },
     [dispatch]
@@ -91,14 +94,14 @@ export function FileUpload() {
           </div>
         </div>
         <h2 className="text-xl font-semibold mb-2 text-gray-900 dark:text-gray-100">
-          Budget Dashboard
+          {config.appName}
         </h2>
         {status ? (
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{status}</p>
         ) : existingFile ? (
           <>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-              Found <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">budget.xlsx</code> — load it or upload a different file.
+              Found <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">{dataFileName}</code> — load it or upload a different file.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
               <button
@@ -106,7 +109,7 @@ export function FileUpload() {
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-indigo-600 text-white font-medium text-sm cursor-pointer hover:bg-indigo-700 transition-colors"
               >
                 <FileSpreadsheet className="w-4 h-4" />
-                Load budget.xlsx
+                Load {dataFileName}
               </button>
               <label className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                 <Upload className="w-4 h-4" />
@@ -123,7 +126,7 @@ export function FileUpload() {
         ) : (
           <>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-              Drop your budget.xlsx here or click to upload.
+              Drop your workbook here or click to upload.
             </p>
             <label className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-indigo-600 text-white font-medium text-sm cursor-pointer hover:bg-indigo-700 transition-colors">
               <Upload className="w-4 h-4" />
@@ -140,4 +143,13 @@ export function FileUpload() {
       </div>
     </div>
   );
+}
+
+/**
+ * WorkbookError messages are written for the person who made the
+ * spreadsheet, so they're shown as-is. Anything else is a genuine bug.
+ */
+function describeError(e: unknown): string {
+  if (e instanceof WorkbookError) return e.message;
+  return `That file could not be read: ${e instanceof Error ? e.message : String(e)}`;
 }

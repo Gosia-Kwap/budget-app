@@ -12,7 +12,8 @@ import {
 import type { AccountBalance, Transaction, Currency } from '../../../types';
 import { calculateRunningBalances } from '../../../lib/transforms';
 import { useBudget } from '../../../context/BudgetContext';
-import { CURRENCY_SYMBOLS } from '../../../lib/currency';
+import { currencySymbol } from '../../../lib/currency';
+import { formatDayMonth } from '../../../lib/format';
 
 const LINE_COLORS = [
   '#6366f1', '#22c55e', '#ef4444', '#f97316',
@@ -62,7 +63,7 @@ function buildTimeline(accounts: AccountBalance[], transactions: Transaction[]) 
     const d = new Date(date);
     return {
       date,
-      label: d.toLocaleDateString('de-CH', { day: '2-digit', month: 'short' }),
+      label: formatDayMonth(d),
       ...values,
     };
   });
@@ -92,7 +93,7 @@ function CurrencyChart({
   return (
     <div>
       <h4 className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-3">
-        {CURRENCY_SYMBOLS[currency]} Accounts
+        {currencySymbol(currency)} Accounts
       </h4>
       <div className="h-64">
         <ResponsiveContainer width="100%" height="100%">
@@ -121,8 +122,8 @@ function CurrencyChart({
                 fontSize: 12,
               }}
               labelStyle={{ color: darkMode ? '#e5e7eb' : '#111827' }}
-              formatter={(value: number, name: string) => [
-                `${CURRENCY_SYMBOLS[currency]} ${value.toFixed(2)}`,
+              formatter={(value, name) => [
+                `${currencySymbol(currency)} ${Number(value).toFixed(2)}`,
                 name,
               ]}
             />

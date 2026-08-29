@@ -1,9 +1,10 @@
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import type { Transaction } from '../../../types';
 import type { CategoryTotal } from '../../../lib/transforms';
-import { formatAmount, CURRENCY_SYMBOLS } from '../../../lib/currency';
+import { formatAmount, currencySymbol } from '../../../lib/currency';
 import { CurrencyBadge } from '../shared/CurrencyBadge';
 import { useBudget } from '../../../context/BudgetContext';
+import { formatDate } from '../../../lib/format';
 
 interface Props {
   categories: CategoryTotal[];
@@ -17,7 +18,7 @@ export function CategoryTable({ categories, transactions, expanded, onToggle }: 
   const total = categories.reduce((sum, c) => sum + c.total, 0);
   const currencyLabel =
     filters.currencyMode === 'filtered'
-      ? `${CURRENCY_SYMBOLS[filters.filterCurrency]} `
+      ? `${currencySymbol(filters.filterCurrency)} `
       : ''; // In 'all' mode, CategoryTable is not rendered (CurrencyComparisonTable is used instead)
 
   return (
@@ -77,7 +78,7 @@ export function CategoryTable({ categories, transactions, expanded, onToggle }: 
                           className="flex items-center gap-2 px-3 py-1 text-xs text-gray-500 dark:text-gray-500"
                         >
                           <span className="w-20 shrink-0">
-                            {t.date.toLocaleDateString('de-CH')}
+                            {formatDate(t.date)}
                           </span>
                           <span className="flex-1 truncate">{t.subcategory}</span>
                           {t.description && (

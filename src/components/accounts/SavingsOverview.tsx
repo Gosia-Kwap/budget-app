@@ -12,8 +12,9 @@ import {
 } from 'recharts';
 import type { AccountBalance, Transaction, Currency } from '../../types';
 import { useBudget } from '../../context/BudgetContext';
-import { CURRENCY_SYMBOLS, formatAmount } from '../../lib/currency';
+import { currencySymbol, formatAmount } from '../../lib/currency';
 import { SectionHeading } from '../overview/SummaryCards';
+import { formatMonthLabel } from '../../lib/format';
 
 interface Props {
   accounts: AccountBalance[];
@@ -26,10 +27,6 @@ interface MonthSavingsData {
   deposits: number;
   withdrawals: number;
   net: number;
-}
-
-function isSavingsAccount(name: string): boolean {
-  return name.toLowerCase().includes('save');
 }
 
 function buildMonthlySavings(
@@ -45,7 +42,7 @@ function buildMonthlySavings(
   for (const t of transfers) {
     const key = `${t.date.getFullYear()}-${String(t.date.getMonth() + 1).padStart(2, '0')}`;
     if (!months.has(key)) {
-      const label = t.date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+      const label = formatMonthLabel(t.date);
       months.set(key, { month: key, label, deposits: 0, withdrawals: 0, net: 0 });
     }
     const m = months.get(key)!;
@@ -94,7 +91,7 @@ function CurrencySavingsChart({
   return (
     <div>
       <h4 className="font-smallcaps tracking-[0.24em] text-[18px] text-brass mb-4">
-        savings in {currency.toLowerCase()}  ·  {CURRENCY_SYMBOLS[currency]}
+        savings in {currency.toLowerCase()}  ·  {currencySymbol(currency)}
       </h4>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-3 mb-6 py-3 border-y border-rule-soft">
@@ -136,8 +133,8 @@ function CurrencySavingsChart({
                 padding: '6px 10px',
               }}
               labelStyle={{ color: '#2f3622', fontStyle: 'italic', marginBottom: 2 }}
-              formatter={(value: number, name: string) => [
-                `${CURRENCY_SYMBOLS[currency]} ${Math.abs(value).toFixed(2)}`,
+              formatter={(value, name) => [
+                `${currencySymbol(currency)} ${Math.abs(Number(value)).toFixed(2)}`,
                 name,
               ]}
             />
@@ -187,7 +184,7 @@ export function SavingsOverview({ accounts, transactions }: Props) {
   const { filters } = useBudget();
 
   const savingsAccounts = useMemo(
-    () => accounts.filter((a) => isSavingsAccount(a.account)),
+    () => accounts.filter((a) => a.isSavings),
     [accounts]
   );
 

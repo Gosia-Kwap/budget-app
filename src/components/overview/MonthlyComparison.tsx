@@ -1,9 +1,11 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import type { Transaction, Currency } from '../../types';
 import { useBudget } from '../../context/BudgetContext';
-import { CURRENCY_SYMBOLS } from '../../lib/currency';
+import { currencySymbol } from '../../lib/currency';
 import { SectionHeading } from './SummaryCards';
 import { InkArrow } from '../shared/Ornaments';
+import { formatMonthLabel, formatNumber } from '../../lib/format';
+import { config } from '../../config';
 
 interface Props {
   transactions: Transaction[];
@@ -50,12 +52,12 @@ export function MonthlyComparison({ transactions }: Props) {
     for (const t of expenses) {
       const key = `${t.date.getFullYear()}-${String(t.date.getMonth() + 1).padStart(2, '0')}`;
       if (!monthMap.has(key)) {
-        const label = t.date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        const label = formatMonthLabel(t.date);
         monthMap.set(key, { month: key, label, categories: new Map(), subcategories: new Map(), totalExpenses: new Map(), totalIncome: new Map() });
       }
       const m = monthMap.get(key)!;
-      const cat = t.category || 'Other';
-      const sub = t.subcategory || 'Other';
+      const cat = t.category || config.fallbackLabels.category;
+      const sub = t.subcategory || config.fallbackLabels.subcategory;
       categorySet.add(cat);
       const sign = t.type === 'ExpenseReturn' ? -1 : 1;
       const amount = sign * Math.abs(t.amount);
@@ -74,7 +76,7 @@ export function MonthlyComparison({ transactions }: Props) {
     for (const t of incomes) {
       const key = `${t.date.getFullYear()}-${String(t.date.getMonth() + 1).padStart(2, '0')}`;
       if (!monthMap.has(key)) {
-        const label = t.date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        const label = formatMonthLabel(t.date);
         monthMap.set(key, { month: key, label, categories: new Map(), subcategories: new Map(), totalExpenses: new Map(), totalIncome: new Map() });
       }
       addAmount(monthMap.get(key)!.totalIncome, t.currency, t.amount);
@@ -182,7 +184,7 @@ export function MonthlyComparison({ transactions }: Props) {
   function renderAmounts(amounts: CurrencyAmounts, className?: string) {
     if (!isAllCurrencies || currencies.length <= 1) {
       const val = sumAmounts(amounts);
-      return <span className={className}>{val === 0 ? <span className="text-rule">—</span> : Math.round(val).toLocaleString('en-US')}</span>;
+      return <span className={className}>{val === 0 ? <span className="text-rule">—</span> : formatNumber(Math.round(val))}</span>;
     }
     return (
       <div className="flex flex-col items-end gap-0.5">
@@ -191,8 +193,8 @@ export function MonthlyComparison({ transactions }: Props) {
           if (val === 0) return null;
           return (
             <span key={c} className={className}>
-              <span className="text-[10px] text-quill mr-1.5">{CURRENCY_SYMBOLS[c]}</span>
-              {Math.round(val).toLocaleString('en-US')}
+              <span className="text-[10px] text-quill mr-1.5">{currencySymbol(c)}</span>
+              {formatNumber(Math.round(val))}
             </span>
           );
         })}
@@ -481,7 +483,7 @@ export function MonthlyComparison({ transactions }: Props) {
                   const net = sumAmounts(netAmounts);
                   return (
                     <td key={m.month} className={`text-right py-3 px-3 font-display text-xl ${net >= 0 ? 'text-moss' : 'text-vermillion'}`}>
-                      {net >= 0 ? '+ ' : '− '}{Math.abs(Math.round(net)).toLocaleString('en-US')}
+                      {net >= 0 ? '+ ' : '− '}{formatNumber(Math.abs(Math.round(net)))}
                     </td>
                   );
                 }
@@ -493,8 +495,8 @@ export function MonthlyComparison({ transactions }: Props) {
                         if (net === 0 && !(m.totalIncome.has(c) || m.totalExpenses.has(c))) return null;
                         return (
                           <span key={c} className={`font-display text-xl ${net >= 0 ? 'text-moss' : 'text-vermillion'}`}>
-                            <span className="text-[10px] text-quill mr-1.5">{CURRENCY_SYMBOLS[c]}</span>
-                            {net >= 0 ? '+ ' : '− '}{Math.abs(Math.round(net)).toLocaleString('en-US')}
+                            <span className="text-[10px] text-quill mr-1.5">{currencySymbol(c)}</span>
+                            {net >= 0 ? '+ ' : '− '}{formatNumber(Math.abs(Math.round(net)))}
                           </span>
                         );
                       })}
@@ -512,7 +514,7 @@ export function MonthlyComparison({ transactions }: Props) {
                     const net = sumAmounts(netAvg);
                     return (
                       <span className={`font-display text-xl ${net >= 0 ? 'text-moss' : 'text-vermillion'}`}>
-                        {net >= 0 ? '+ ' : '− '}{Math.abs(Math.round(net)).toLocaleString('en-US')}
+                        {net >= 0 ? '+ ' : '− '}{formatNumber(Math.abs(Math.round(net)))}
                       </span>
                     );
                   }
@@ -522,8 +524,8 @@ export function MonthlyComparison({ transactions }: Props) {
                         const net = netAvg.get(c) ?? 0;
                         return (
                           <span key={c} className={`font-display text-xl ${net >= 0 ? 'text-moss' : 'text-vermillion'}`}>
-                            <span className="text-[10px] text-quill mr-1.5">{CURRENCY_SYMBOLS[c]}</span>
-                            {net >= 0 ? '+ ' : '− '}{Math.abs(Math.round(net)).toLocaleString('en-US')}
+                            <span className="text-[10px] text-quill mr-1.5">{currencySymbol(c)}</span>
+                            {net >= 0 ? '+ ' : '− '}{formatNumber(Math.abs(Math.round(net)))}
                           </span>
                         );
                       })}

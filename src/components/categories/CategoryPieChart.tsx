@@ -1,7 +1,9 @@
+import { useMemo } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import type { CategoryTotal } from '../../lib/transforms';
 import { useBudget } from '../../context/BudgetContext';
-import { CURRENCY_SYMBOLS } from '../../lib/currency';
+import { currencySymbol, listCurrencies, currencyIndex } from '../../lib/currency';
+import { toRoman } from '../../lib/format';
 import type { Currency } from '../../types';
 import { SectionHeading } from '../overview/SummaryCards';
 
@@ -21,9 +23,10 @@ interface Props {
 }
 
 export function CategoryPieChart({ categories, selected, onSelect, currencyOverride, compact }: Props) {
-  const { filters } = useBudget();
+  const { filters, data: budget } = useBudget();
+  const allCurrencies = useMemo(() => listCurrencies(budget), [budget]);
   const currency = currencyOverride ?? (filters.currencyMode === 'filtered' ? filters.filterCurrency : undefined);
-  const currencyLabel = currency ? `${CURRENCY_SYMBOLS[currency]} ` : '';
+  const currencyLabel = currency ? `${currencySymbol(currency)} ` : '';
 
   const data = categories.map((c) => ({
     name: c.category,
@@ -31,7 +34,10 @@ export function CategoryPieChart({ categories, selected, onSelect, currencyOverr
   }));
 
   const title = currencyOverride ? `In ${currencyOverride.toLowerCase()}` : 'Spending by category';
-  const kicker = currencyOverride ? `Plate ${plateNum(currencyOverride)}` : 'Plate III';
+  // Plates I-III are the fixed charts; the per-currency plates carry on from IV.
+  const kicker = currencyOverride
+    ? `Plate ${toRoman(4 + currencyIndex(currencyOverride, allCurrencies))}`
+    : 'Plate III';
 
   return (
     <section>
@@ -100,8 +106,4 @@ export function CategoryPieChart({ categories, selected, onSelect, currencyOverr
       </div>
     </section>
   );
-}
-
-function plateNum(c: Currency): string {
-  return c === 'CHF' ? 'IV' : c === 'EUR' ? 'V' : 'VI';
 }

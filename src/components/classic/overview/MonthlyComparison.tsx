@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Transaction, Currency } from '../../../types';
 import { ArrowUp, ArrowDown, Check, ChevronDown, ChevronRight } from 'lucide-react';
 import { useBudget } from '../../../context/BudgetContext';
-import { CURRENCY_SYMBOLS } from '../../../lib/currency';
+import { currencySymbol } from '../../../lib/currency';
+import { formatMonthLabel } from '../../../lib/format';
+import { config } from '../../../config';
 
 interface Props {
   transactions: Transaction[];
@@ -50,12 +52,12 @@ export function MonthlyComparison({ transactions }: Props) {
     for (const t of expenses) {
       const key = `${t.date.getFullYear()}-${String(t.date.getMonth() + 1).padStart(2, '0')}`;
       if (!monthMap.has(key)) {
-        const label = t.date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        const label = formatMonthLabel(t.date);
         monthMap.set(key, { month: key, label, categories: new Map(), subcategories: new Map(), totalExpenses: new Map(), totalIncome: new Map() });
       }
       const m = monthMap.get(key)!;
-      const cat = t.category || 'Other';
-      const sub = t.subcategory || 'Other';
+      const cat = t.category || config.fallbackLabels.category;
+      const sub = t.subcategory || config.fallbackLabels.subcategory;
       categorySet.add(cat);
       const sign = t.type === 'ExpenseReturn' ? -1 : 1;
       const amount = sign * Math.abs(t.amount);
@@ -74,7 +76,7 @@ export function MonthlyComparison({ transactions }: Props) {
     for (const t of incomes) {
       const key = `${t.date.getFullYear()}-${String(t.date.getMonth() + 1).padStart(2, '0')}`;
       if (!monthMap.has(key)) {
-        const label = t.date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        const label = formatMonthLabel(t.date);
         monthMap.set(key, { month: key, label, categories: new Map(), subcategories: new Map(), totalExpenses: new Map(), totalIncome: new Map() });
       }
       addAmount(monthMap.get(key)!.totalIncome, t.currency, t.amount);
@@ -197,7 +199,7 @@ export function MonthlyComparison({ transactions }: Props) {
           if (val === 0) return null;
           return (
             <span key={c} className={className}>
-              <span className="text-[10px] text-gray-400 dark:text-gray-500 mr-1">{CURRENCY_SYMBOLS[c]}</span>
+              <span className="text-[10px] text-gray-400 dark:text-gray-500 mr-1">{currencySymbol(c)}</span>
               {val.toFixed(0)}
             </span>
           );
@@ -497,7 +499,7 @@ export function MonthlyComparison({ transactions }: Props) {
                         if (net === 0 && !(m.totalIncome.has(c) || m.totalExpenses.has(c))) return null;
                         return (
                           <span key={c} className={net >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}>
-                            <span className="text-[10px] text-gray-400 dark:text-gray-500 mr-1">{CURRENCY_SYMBOLS[c]}</span>
+                            <span className="text-[10px] text-gray-400 dark:text-gray-500 mr-1">{currencySymbol(c)}</span>
                             {net >= 0 ? '+' : ''}{net.toFixed(0)}
                           </span>
                         );
@@ -526,7 +528,7 @@ export function MonthlyComparison({ transactions }: Props) {
                         const net = netAvg.get(c) ?? 0;
                         return (
                           <span key={c} className={net >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}>
-                            <span className="text-[10px] text-gray-400 dark:text-gray-500 mr-1">{CURRENCY_SYMBOLS[c]}</span>
+                            <span className="text-[10px] text-gray-400 dark:text-gray-500 mr-1">{currencySymbol(c)}</span>
                             {net >= 0 ? '+' : ''}{net.toFixed(0)}
                           </span>
                         );

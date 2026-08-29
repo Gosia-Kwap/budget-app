@@ -53,7 +53,7 @@ export function TopCategoriesChart({ transactions }: Props) {
                 borderRadius: 8,
                 fontSize: 13,
               }}
-              formatter={(value: number) => value.toFixed(2)}
+              formatter={(value) => Number(value).toFixed(2)}
             />
             <Bar dataKey="total" name="Total" radius={[0, 4, 4, 0]}>
               {data.map((_, i) => (

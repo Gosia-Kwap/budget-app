@@ -1,4 +1,9 @@
-export type Currency = 'CHF' | 'EUR' | 'PLN';
+/**
+ * An ISO 4217 code as written in your workbook's Currency column — 'CHF',
+ * 'EUR', 'PLN', 'GBP', anything. Deliberately a plain string so the app is
+ * not limited to a fixed set; see src/lib/currency.ts.
+ */
+export type Currency = string;
 export type TransactionType = 'Expense' | 'Income' | 'Transfer' | 'ExpenseReturn';
 export type ActivePage = 'overview' | 'categories' | 'accounts';
 export type ViewMode = 'ledger' | 'classic';
@@ -23,6 +28,8 @@ export interface AccountBalance {
   startDate: Date;
   currentBalance: number;
   currency: Currency;
+  /** True when this account counts towards the Savings Overview. */
+  isSavings: boolean;
 }
 
 export interface CategoryMapping {

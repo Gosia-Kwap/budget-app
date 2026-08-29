@@ -39,14 +39,16 @@ const transactions = [
   { Date: '20.12.2025', Week: 51, Category: 'Jedzenie', Subcategory: 'ekstra', Type: 'Expense', Amount: -95.00, Currency: 'CHF', Account: 'Revolut CH', Context: '', GroupID: '', Description: 'Christmas dinner' },
 ];
 
+// `Type` is optional but recommended: it is what marks an account as savings,
+// instead of the app having to guess from the account's name.
 const accounts = [
-  { Account: 'UBS Everyday', StartingBalance: 5000, StartDate: '01.10.2025', 'Current balance': 4200, Currency: 'CHF' },
-  { Account: 'UBS Save', StartingBalance: 10000, StartDate: '01.10.2025', 'Current balance': 10500, Currency: 'CHF' },
-  { Account: 'ABN Everyday', StartingBalance: 2000, StartDate: '01.10.2025', 'Current balance': 1800, Currency: 'EUR' },
-  { Account: 'ABN Save', StartingBalance: 5000, StartDate: '01.10.2025', 'Current balance': 5000, Currency: 'EUR' },
-  { Account: 'mBank', StartingBalance: 1500, StartDate: '01.10.2025', 'Current balance': 1692, Currency: 'PLN' },
-  { Account: 'Revolut CH', StartingBalance: 200, StartDate: '01.10.2025', 'Current balance': 146, Currency: 'CHF' },
-  { Account: 'Revolut EUR', StartingBalance: 100, StartDate: '01.10.2025', 'Current balance': 300, Currency: 'EUR' },
+  { Account: 'UBS Everyday', Type: 'Everyday', StartingBalance: 5000, StartDate: '01.10.2025', 'Current balance': 4200, Currency: 'CHF' },
+  { Account: 'UBS Save', Type: 'Savings', StartingBalance: 10000, StartDate: '01.10.2025', 'Current balance': 10500, Currency: 'CHF' },
+  { Account: 'ABN Everyday', Type: 'Everyday', StartingBalance: 2000, StartDate: '01.10.2025', 'Current balance': 1800, Currency: 'EUR' },
+  { Account: 'ABN Save', Type: 'Savings', StartingBalance: 5000, StartDate: '01.10.2025', 'Current balance': 5000, Currency: 'EUR' },
+  { Account: 'mBank', Type: 'Everyday', StartingBalance: 1500, StartDate: '01.10.2025', 'Current balance': 1692, Currency: 'PLN' },
+  { Account: 'Revolut CH', Type: 'Everyday', StartingBalance: 200, StartDate: '01.10.2025', 'Current balance': 146, Currency: 'CHF' },
+  { Account: 'Revolut EUR', Type: 'Everyday', StartingBalance: 100, StartDate: '01.10.2025', 'Current balance': 300, Currency: 'EUR' },
 ];
 
 const categories = [

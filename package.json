@@ -1,5 +1,5 @@
 {
-  "name": "budget-scaffold",
+  "name": "budget-app",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "template": "node scripts/generate-template.js",
+    "mock": "node scripts/generate-mock.js"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.1",

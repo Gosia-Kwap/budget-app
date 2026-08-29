@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 import type { Transaction, Currency } from '../../types';
 import { summarizeByCurrency } from '../../lib/transforms';
-import { CURRENCY_SYMBOLS } from '../../lib/currency';
+import { currencySymbol } from '../../lib/currency';
+import { formatNumber } from '../../lib/format';
 
 interface Props {
   transactions: Transaction[];
@@ -85,9 +86,9 @@ export function SummaryCards({ transactions }: Props) {
 }
 
 function formatLedger(n: number, c: Currency): string {
-  const sym = CURRENCY_SYMBOLS[c];
+  const sym = currencySymbol(c);
   const fixed = n >= 1000
-    ? n.toLocaleString('en-US', { maximumFractionDigits: 0 })
+    ? formatNumber(n, { maximumFractionDigits: 0 })
     : n.toFixed(2);
   return `${sym} ${fixed}`;
 }

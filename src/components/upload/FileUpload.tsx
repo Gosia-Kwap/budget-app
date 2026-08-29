@@ -1,18 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useBudgetDispatch } from '../../context/BudgetContext';
-import { parseExcelFile } from '../../lib/parser';
+import { parseExcelFile, WorkbookError } from '../../lib/parser';
 import { Flourish } from '../shared/Ornaments';
+import { formatDate, toRoman } from '../../lib/format';
+import { config } from '../../config';
 
-function toRoman(n: number): string {
-  const vals: [number, string][] = [
-    [1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'],
-    [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'],
-    [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I'],
-  ];
-  let out = '';
-  for (const [v, s] of vals) { while (n >= v) { out += s; n -= v; } }
-  return out;
-}
+const dataFileName = config.dataFile.split('/').pop() ?? config.dataFile;
 
 export function FileUpload() {
   const dispatch = useBudgetDispatch();
@@ -23,8 +16,8 @@ export function FileUpload() {
   useEffect(() => {
     async function checkExisting() {
       try {
-        setStatus('looking for budget.xlsx…');
-        const res = await fetch('/data/budget.xlsx');
+        setStatus(`looking for ${dataFileName}…`);
+        const res = await fetch(config.dataFile);
         if (res.ok) {
           const buffer = await res.arrayBuffer();
           setExistingFile(buffer);
@@ -39,11 +32,11 @@ export function FileUpload() {
     if (!existingFile) return;
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
-      setStatus('parsing budget.xlsx…');
+      setStatus(`parsing ${dataFileName}…`);
       const data = await parseExcelFile(existingFile);
       dispatch({ type: 'SET_DATA', payload: data });
     } catch (e) {
-      dispatch({ type: 'SET_ERROR', payload: `failed to parse file: ${e}` });
+      dispatch({ type: 'SET_ERROR', payload: describeError(e) });
     }
   }, [existingFile, dispatch]);
 
@@ -54,7 +47,7 @@ export function FileUpload() {
         const data = await parseExcelFile(file);
         dispatch({ type: 'SET_DATA', payload: data });
       } catch (e) {
-        dispatch({ type: 'SET_ERROR', payload: `failed to parse file: ${e}` });
+        dispatch({ type: 'SET_ERROR', payload: describeError(e) });
       }
     },
     [dispatch]
@@ -87,21 +80,21 @@ export function FileUpload() {
         {/* Title page */}
         <div className="text-center">
           <div className="font-smallcaps tracking-[0.28em] text-[15px] text-brass mb-6">
-            volume {toRoman(today.getFullYear() - 2023)}  ·  privately kept
+            volume {toRoman(today.getFullYear() - config.firstYear + 1)}  ·  privately kept
           </div>
 
           <h1 className="font-display text-6xl font-normal tracking-wide text-ink leading-none">
-            The Ledger
+            {config.appName}
           </h1>
 
           <p className="font-serif italic text-faded text-xl mt-4">
-            a private account of monies kept &amp; spent
+            {config.tagline}
           </p>
 
           <Flourish className="mx-auto mt-6 text-brass w-44 h-5" />
 
           <div className="mt-3 mb-12 font-smallcaps tracking-[0.24em] text-[14px] text-quill">
-            opened on {today.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' }).toLowerCase()} · {toRoman(today.getFullYear())}
+            opened on {formatDate(today, { day: 'numeric', month: 'long' }).toLowerCase()} · {toRoman(today.getFullYear())}
           </div>
         </div>
 
@@ -126,7 +119,7 @@ export function FileUpload() {
             <div className="text-center">
               <p className="font-serif italic text-faded text-lg">
                 a volume was found —{' '}
-                <span className="not-italic font-smallcaps tracking-[0.18em] text-[15px] text-ink">budget.xlsx</span>
+                <span className="not-italic font-smallcaps tracking-[0.18em] text-[15px] text-ink">{dataFileName}</span>
               </p>
               <p className="font-serif italic text-quill text-base mt-1.5">
                 open it, or supply another in its place
@@ -157,7 +150,7 @@ export function FileUpload() {
                 lay a workbook upon the page
               </p>
               <p className="font-serif italic text-quill text-base mt-1.5">
-                drop a budget.xlsx here, or
+                drop a workbook here, or
               </p>
 
               <label className="inline-block mt-6 font-smallcaps tracking-[0.24em] text-[16.5px] text-vermillion border-b border-vermillion pb-1 hover:text-brass hover:border-brass transition-colors duration-150 cursor-pointer">
@@ -174,9 +167,18 @@ export function FileUpload() {
         </div>
 
         <div className="mt-12 text-center font-smallcaps tracking-[0.24em] text-[14px] text-quill">
-          kept by hand · marked &amp; sealed
+          {config.colophon}
         </div>
       </div>
     </div>
   );
+}
+
+/**
+ * WorkbookError messages are written for the person who made the
+ * spreadsheet, so they're shown as-is. Anything else is a genuine bug.
+ */
+function describeError(e: unknown): string {
+  if (e instanceof WorkbookError) return e.message;
+  return `That file could not be read: ${e instanceof Error ? e.message : String(e)}`;
 }

@@ -1,7 +1,7 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import type { CategoryTotal } from '../../../lib/transforms';
 import { useBudget } from '../../../context/BudgetContext';
-import { CURRENCY_SYMBOLS } from '../../../lib/currency';
+import { currencySymbol } from '../../../lib/currency';
 import type { Currency } from '../../../types';
 
 const COLORS = [
@@ -21,7 +21,7 @@ interface Props {
 export function CategoryPieChart({ categories, selected, onSelect, currencyOverride, compact }: Props) {
   const { darkMode, filters } = useBudget();
   const currency = currencyOverride ?? (filters.currencyMode === 'filtered' ? filters.filterCurrency : undefined);
-  const currencyLabel = currency ? `${CURRENCY_SYMBOLS[currency]} ` : '';
+  const currencyLabel = currency ? `${currencySymbol(currency)} ` : '';
 
   const data = categories.map((c) => ({
     name: c.category,

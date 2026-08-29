@@ -1,11 +1,13 @@
 import { createContext, useContext, useReducer, type ReactNode, type Dispatch } from 'react';
 import type { AppState, AppAction, FilterState } from '../types';
+import { listCurrencies } from '../lib/currency';
 
 const initialFilters: FilterState = {
   startDate: null,
   endDate: null,
   currencyMode: 'all',
-  filterCurrency: 'CHF',
+  // Filled in from the workbook once it loads — there is no default currency.
+  filterCurrency: '',
 };
 
 const initialState: AppState = {
@@ -20,8 +22,21 @@ const initialState: AppState = {
 
 function reducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
-    case 'SET_DATA':
-      return { ...state, data: action.payload, loading: false, error: null };
+    case 'SET_DATA': {
+      // Point the currency filter at a currency that actually exists in this
+      // workbook, so switching off "all" can never land on an empty view.
+      const available = listCurrencies(action.payload);
+      const filterCurrency = available.includes(state.filters.filterCurrency)
+        ? state.filters.filterCurrency
+        : available[0] ?? '';
+      return {
+        ...state,
+        data: action.payload,
+        filters: { ...state.filters, filterCurrency },
+        loading: false,
+        error: null,
+      };
+    }
     case 'SET_LOADING':
       return { ...state, loading: action.payload };
     case 'SET_ERROR':

@@ -6,6 +6,8 @@ import { CategoriesPage } from '../categories/CategoriesPage';
 import { AccountsPage } from '../accounts/AccountsPage';
 import { useBudget, useBudgetDispatch } from '../../context/BudgetContext';
 import { Flourish } from '../shared/Ornaments';
+import { toRoman, formatDate } from '../../lib/format';
+import { config } from '../../config';
 
 const pages = {
   overview: OverviewPage,
@@ -19,29 +21,13 @@ const pageRoman: Record<keyof typeof pages, string> = {
   accounts: 'iii',
 };
 
-const monthNames = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
-
-function toRoman(n: number): string {
-  const vals: [number, string][] = [
-    [1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'],
-    [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'],
-    [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I'],
-  ];
-  let out = '';
-  for (const [v, s] of vals) { while (n >= v) { out += s; n -= v; } }
-  return out;
-}
-
 export function Shell() {
   const { activePage } = useBudget();
   const dispatch = useBudgetDispatch();
   const Page = pages[activePage];
 
   const today = new Date();
-  const monthYear = `${monthNames[today.getMonth()]} · ${toRoman(today.getFullYear())}`;
+  const monthYear = `${formatDate(today, { month: 'long' })} · ${toRoman(today.getFullYear())}`;
   const dayOfYear = Math.floor(
     (today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) / 86400000
   );
@@ -69,10 +55,10 @@ export function Shell() {
 
           <div className="mt-6 flex flex-col items-center">
             <h1 className="font-display text-5xl lg:text-6xl font-normal tracking-wide text-ink">
-              The Ledger
+              {config.appName}
             </h1>
             <p className="font-serif italic text-faded text-xl mt-2">
-              a private account of monies kept &amp; spent
+              {config.tagline}
             </p>
             <Flourish className="mt-5 text-brass w-44 h-4" />
           </div>

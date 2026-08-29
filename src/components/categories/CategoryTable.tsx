@@ -1,9 +1,10 @@
 import type { Transaction } from '../../types';
 import type { CategoryTotal } from '../../lib/transforms';
-import { formatAmount, CURRENCY_SYMBOLS } from '../../lib/currency';
+import { formatAmount, currencySymbol } from '../../lib/currency';
 import { CurrencyBadge } from '../shared/CurrencyBadge';
 import { useBudget } from '../../context/BudgetContext';
 import { SectionHeading } from '../overview/SummaryCards';
+import { formatDayMonth } from '../../lib/format';
 
 interface Props {
   categories: CategoryTotal[];
@@ -17,7 +18,7 @@ export function CategoryTable({ categories, transactions, expanded, onToggle }: 
   const total = categories.reduce((sum, c) => sum + c.total, 0);
   const currencyLabel =
     filters.currencyMode === 'filtered'
-      ? `${CURRENCY_SYMBOLS[filters.filterCurrency]} `
+      ? `${currencySymbol(filters.filterCurrency)} `
       : '';
 
   return (
@@ -92,7 +93,7 @@ export function CategoryTable({ categories, transactions, expanded, onToggle }: 
                             className="flex items-baseline gap-3 text-base text-quill"
                           >
                             <span className="w-20 shrink-0 font-smallcaps tracking-[0.18em] text-[14px]">
-                              {t.date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).toLowerCase()}
+                              {formatDayMonth(t.date).toLowerCase()}
                             </span>
                             <span className="flex-1 truncate italic">{t.subcategory}</span>
                             {t.description && (

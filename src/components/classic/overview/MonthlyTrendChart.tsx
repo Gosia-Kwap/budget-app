@@ -36,7 +36,7 @@ export function MonthlyTrendChart({ transactions }: Props) {
                 fontSize: 13,
               }}
               labelStyle={{ color: darkMode ? '#e5e7eb' : '#111827' }}
-              formatter={(value: number) => value.toFixed(2)}
+              formatter={(value) => Number(value).toFixed(2)}
             />
             <Bar dataKey="income" name="Income" fill="#22c55e" radius={[4, 4, 0, 0]} />
             <Bar dataKey="expenses" name="Expenses" fill="#ef4444" radius={[4, 4, 0, 0]} />
